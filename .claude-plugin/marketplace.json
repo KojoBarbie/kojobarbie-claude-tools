@@ -1,0 +1,14 @@
+{
+  "name": "kojobarbie-tools",
+  "description": "KojoBarbie の個人開発用 Claude Code プラグイン マーケットプレイス",
+  "owner": {
+    "name": "KojoBarbie"
+  },
+  "plugins": [
+    {
+      "name": "dev-workflow-tools",
+      "source": "./plugins/dev-workflow-tools",
+      "description": "GitHub issue/PR 開発ワークフロー用スキル集（feature-planning / ship-issue / pr-batch-review / pr-review-unresolved / pr-comment-reply）"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "dev-workflow-tools",
+  "description": "GitHub issue/PR 開発ワークフロー用スキル集（アイデア→Issue化→実装→PR→セルフレビュー→修正）",
+  "author": {
+    "name": "KojoBarbie"
+  }
+}
