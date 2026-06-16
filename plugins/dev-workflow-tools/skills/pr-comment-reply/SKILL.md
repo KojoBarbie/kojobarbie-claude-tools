@@ -48,7 +48,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/skills/pr-comment-reply/scripts/reply_to_pr_comment.s
 **Example:**
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh KojoBarbie tomarigi 2458874183 "Fixed this issue in commit abc123"
+bash ${CLAUDE_PLUGIN_ROOT}/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh <owner> <repo> 1234567890 "Fixed this issue in commit abc123"
 ```
 
 ### Step 3: Verify Success

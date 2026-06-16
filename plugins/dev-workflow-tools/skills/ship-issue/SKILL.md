@@ -1,6 +1,6 @@
 ---
 name: ship-issue
-allowed-tools: Read, Edit, Write, Glob, Grep, Agent, TodoWrite, Skill(pr-batch-review), Skill(pr-review-unresolved), Skill(pr-comment-reply), Bash(git:*), Bash(gh:*), Bash(dart:*), Bash(fvm:*), Bash(*/skills/pr-batch-review/scripts/submit_batch_review.sh:*), Bash(*/skills/pr-review-unresolved/scripts/get_unresolved_comments.sh:*), Bash(*/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh:*)
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, TodoWrite, Skill(pr-batch-review), Skill(pr-review-unresolved), Skill(pr-comment-reply), Bash(git:*), Bash(gh:*), Bash(*/skills/pr-batch-review/scripts/submit_batch_review.sh:*), Bash(*/skills/pr-review-unresolved/scripts/get_unresolved_comments.sh:*), Bash(*/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh:*)
 description: GitHub issue 番号を1つ受け取り、要件読取 → プランモードでの計画承認 → 実装+テスト → PR作成 → サブエージェントによるレビュー(PRインラインコメント) → 修正/返信の1往復 → 停止、までを人手を最小化して自走させる実装オーケストレーター。ユーザーが「issue #42 を実装して」「この issue をやって」「issue から実装して PR まで出して」「ship-issue 42」のように、既存の GitHub issue を起点にコードを書いてレビューまで一気に進めてほしいと言ったら積極的に使う。要件がまだ曖昧でこれから issue を作る段階（feature-planning の領域）ではなく、すでに issue として実装内容が固まっていて、それを実装→PR→セルフレビュー→修正まで回したい局面で力を発揮する。
 ---
 
@@ -83,11 +83,9 @@ gh api /repos/{owner}/{repo}/issues/<N>/sub_issues --jq '.[] | "\(.number) \(.ti
    git switch -c <type>/<short-desc>
    ```
 2. 実装する。テストを先に書ける箇所はテストから書く（TDD は推奨だが厳格な儀式は不要。要は「振る舞いをテストで固定してから実装」できる箇所はそうする）。
-3. **テストを実行する。ここは絶対厳守**：
-   ```
-   dart tool の run tests を使う（= dart の test ランナー経由で全テストを走らせる）
-   ```
-   `fvm flutter test` は使わない（CLAUDE.md の「絶対に守ること」）。デグレが無いことを全テストで確認する。
+3. **テストを実行する。ここは絶対厳守**：プロジェクトのテストランナーで全テストを走らせ、デグレが無いことを確認する。
+   - テスト実行コマンドはプロジェクトに合わせる（例: `npm test` / `pytest` / `go test ./...` / `cargo test` / `flutter test` など）。
+   - `CLAUDE.md` や README などにテスト実行の規約（使うべきコマンド・避けるべきコマンド）があれば、**必ずそれに従う**。規約が無ければ、そのリポジトリで標準的なランナーを使う。
 4. テストが落ちたら直す。直しきれない／設計上の判断が要る場合は、**自走を止めて状況を報告**する（暴走させない）。
 5. コミットは Conventional Commits + 日本語本文で、論理単位ごとに分ける：
    ```bash
@@ -110,7 +108,7 @@ gh pr create --title "<type>: <タイトル>" --body "$(cat <<'EOF'
 - <箇条書き>
 
 ## テスト
-- dart の test ランナーで全テスト green を確認
+- 全テストが green であることを確認
 
 Closes #<N>
 EOF
@@ -159,7 +157,7 @@ GitHub Actions のレビューには頼らず、**ローカルのサブエージ
 2. **対応方針を判断**（コメントごとに）：
    - 対応する: バグ・セキュリティ・明確な改善・正しく動かない箇所
    - 対応しない: 現状の設計に正当性がある／スコープ外／トレードオフ上あえて現状維持 — この場合は**理由を用意**する（議論として返信する）
-3. **修正 → テスト → コミット**：対応するコメントごとに修正し、**`dart tool の run tests` で全テストを実行**してデグレ無しを確認し、1 コメント 1 コミットで積む。
+3. **修正 → テスト → コミット**：対応するコメントごとに修正し、**プロジェクトのテストランナーで全テストを実行**してデグレ無しを確認し、1 コメント 1 コミットで積む。
 4. **まとめて push**：
    ```bash
    git push origin HEAD
