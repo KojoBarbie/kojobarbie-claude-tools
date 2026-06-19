@@ -1,6 +1,6 @@
 ---
 name: ship-issue
-allowed-tools: Read, Edit, Write, Glob, Grep, Agent, TodoWrite, Skill(pr-batch-review), Skill(pr-review-unresolved), Skill(pr-comment-reply), Bash(git:*), Bash(gh:*), Bash(*/skills/pr-batch-review/scripts/submit_batch_review.sh:*), Bash(*/skills/pr-review-unresolved/scripts/get_unresolved_comments.sh:*), Bash(*/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh:*)
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, TodoWrite, EnterPlanMode, ExitPlanMode, Skill(pr-batch-review), Skill(pr-review-unresolved), Skill(pr-comment-reply), Bash(git:*), Bash(gh:*), Bash(*/skills/pr-batch-review/scripts/submit_batch_review.sh:*), Bash(*/skills/pr-review-unresolved/scripts/get_unresolved_comments.sh:*), Bash(*/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh:*)
 description: GitHub issue 番号を1つ受け取り、要件読取 → プランモードでの計画承認 → 実装+テスト → PR作成 → サブエージェントによるレビュー(PRインラインコメント) → 修正/返信の1往復 → 停止、までを人手を最小化して自走させる実装オーケストレーター。ユーザーが「issue #42 を実装して」「この issue をやって」「issue から実装して PR まで出して」「ship-issue 42」のように、既存の GitHub issue を起点にコードを書いてレビューまで一気に進めてほしいと言ったら積極的に使う。要件がまだ曖昧でこれから issue を作る段階（feature-planning の領域）ではなく、すでに issue として実装内容が固まっていて、それを実装→PR→セルフレビュー→修正まで回したい局面で力を発揮する。
 ---
 
@@ -61,7 +61,9 @@ gh api /repos/{owner}/{repo}/issues/<N>/sub_issues --jq '.[] | "\(.number) \(.ti
 
 ### ステップ 2: プランモードで計画 → 承認（唯一の中断点）
 
-プランモードに入り、実装計画を提示してユーザーの承認を得る。承認後はステップ 3 以降を自走する。
+**まず `EnterPlanMode` ツールを呼んでプランモードに入る**（自然言語で「計画を立てる」と書くだけでは入らない。必ずツールを呼ぶこと）。要件読取や軽い調査を済ませて計画がまとまったら、**`ExitPlanMode` ツールに計画を渡して提示し、ユーザーの承認を得る**。承認後はステップ 3 以降を自走する。
+
+> 計画をチャット本文に直接書いて承認を求めてはいけない。承認ゲートは `ExitPlanMode` ツール経由で成立させる。
 
 計画に必ず含めるもの：
 
