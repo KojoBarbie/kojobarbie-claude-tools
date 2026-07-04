@@ -8,7 +8,7 @@
     {
       "name": "dev-workflow-tools",
       "source": "./plugins/dev-workflow-tools",
-      "description": "GitHub issue/PR 開発ワークフロー用スキル集（feature-planning / ship-issue / pr-batch-review / pr-review-unresolved / pr-comment-reply）"
+      "description": "個人開発ワークフロー用スキル集：GitHub issue/PR フロー（feature-planning / ship-issue / pr-batch-review / pr-review-unresolved / pr-comment-reply / quality-release-cycle）、デザインレビュー（app-design-craft / ui-design-fundamentals / onboarding-advisor）、画像生成（nanobanana-pro / gpt-image-2）"
     }
   ]
 }
