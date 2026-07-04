@@ -28,12 +28,16 @@ GitHub issue/PR の開発ワークフロー用スキル集。「アイデア →
 | **pr-batch-review** | 複数のインラインレビューコメントを 1 つの GitHub PR レビューとしてまとめて投稿し、通知ノイズを減らす。 |
 | **pr-review-unresolved** | 現在のブランチの PR から未解決のインラインレビューコメントを取得して一覧表示する。 |
 | **pr-comment-reply** | comment ID を指定して、特定のインラインレビューコメントに返信を投稿する。 |
+| **quality-release-cycle** | スマホアプリ（Flutter / iOS ネイティブ）＋バックエンドの品質サイクル運用。audit（パフォーマンス / UI/UX / バックエンド / テスト・CI の網羅監査 → コード裏取り → 既存 Issue 重複照合 → Issue 化 → トラッキング更新）/ release（リリース可否の ✅/⚠️/❌ 三択判定）/ status（次アクション推奨）の3モード。 |
 
 #### 標準的な使い方
 
-1. `feature-planning` でアイデアを Issue 群に落とし込む
+1. `feature-planning` でアイデアを Issue 群に落とし込む（改善系は `quality-release-cycle` の audit で洗い出す）
 2. `ship-issue <issue番号>` で実装 → PR → セルフレビュー → 修正まで自走させる
    （`ship-issue` がレビュー投稿・未解決取得・返信に他の 3 スキルを自動で使う）
+3. リリース前に `quality-release-cycle` の release で可否判定してから配信する
+
+`quality-release-cycle` を使うリポジトリには `.claude/quality-cycle.md`（テストコマンド・リリースフロー・トラッキング Issue 番号・対応済み監査の履歴）を置くと精度が上がる。なければスキルが自動検出し、初回実行後に生成を提案する。
 
 ### 前提
 
