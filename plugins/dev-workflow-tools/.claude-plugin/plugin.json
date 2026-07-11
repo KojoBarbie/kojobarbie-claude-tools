@@ -1,6 +1,6 @@
 {
   "name": "dev-workflow-tools",
-  "description": "個人開発ワークフロー用スキル集。GitHub issue/PR フロー（アイデア→Issue化→実装→PR→セルフレビュー→修正→品質監査→リリース準備）＋ デザインレビュー（app-design-craft / ui-design-fundamentals / onboarding-advisor）＋ 画像生成（nanobanana-pro / gpt-image-2）",
+  "description": "個人開発ワークフロー用スキル集。GitHub issue/PR フロー（アイデア→Issue化→実装→PR→セルフレビュー→修正）＋ デザインレビュー（app-design-craft / ui-design-fundamentals / onboarding-advisor）＋ 画像生成（nanobanana-pro / gpt-image-2）。アプリ量産サイクル（監査・リリース含む）は app-factory プラグインへ",
   "author": {
     "name": "KojoBarbie"
   }

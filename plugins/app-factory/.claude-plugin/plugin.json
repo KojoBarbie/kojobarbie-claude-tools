@@ -1,0 +1,7 @@
+{
+  "name": "app-factory",
+  "description": "週次でアプリが生まれ、計測され、有望な芽だけが育つ自動アプリ工場（App Factory）。アプリのライフサイクル全体を担うスキル集：app-idea-hunt（ネタ発掘+JTBD分析+KPI設計+モック/トンマナ生成）→ app-kickoff → xcode-cloud-setup → factory-build（issue自律実装）→ store-release（App Store提出・24h拒否権）→ feature-hunt / growth-advisor（機能・グロース提案）→ quality-release-cycle（品質監査）→ portfolio-review（計測→ステージ判定→週報）。claude-cron 用の定期実行テンプレート同梱。設計: docs/app-factory.md",
+  "author": {
+    "name": "KojoBarbie"
+  }
+}
