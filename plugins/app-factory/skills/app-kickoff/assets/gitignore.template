@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+
+# SwiftPM
+.swiftpm/
+.build/
+
+# 環境・秘匿情報
+.env
+*.p8
+GoogleService-Info.plist
+
+# Claude
+.claude/settings.local.json

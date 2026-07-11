@@ -8,7 +8,12 @@
     {
       "name": "dev-workflow-tools",
       "source": "./plugins/dev-workflow-tools",
-      "description": "個人開発ワークフロー用スキル集：GitHub issue/PR フロー（feature-planning / ship-issue / pr-batch-review / pr-review-unresolved / pr-comment-reply / quality-release-cycle）、デザインレビュー（app-design-craft / ui-design-fundamentals / onboarding-advisor）、画像生成（nanobanana-pro / gpt-image-2）"
+      "description": "個人開発ワークフロー用スキル集：GitHub issue/PR フロー（feature-planning / ship-issue / pr-batch-review / pr-review-unresolved / pr-comment-reply）、デザインレビュー（app-design-craft / ui-design-fundamentals / onboarding-advisor）、画像生成（nanobanana-pro / gpt-image-2）"
+    },
+    {
+      "name": "app-factory",
+      "source": "./plugins/app-factory",
+      "description": "週次でアプリが生まれ、計測され、有望な芽だけが育つ自動アプリ工場。ライフサイクル全部入り：app-idea-hunt（ネタ発掘+ジョブ分析+モック/トンマナ）/ app-kickoff / xcode-cloud-setup / factory-build（自律実装）/ store-release（App Store 提出）/ feature-hunt / growth-advisor / quality-release-cycle（品質監査）/ portfolio-review（計測→判定→週報）+ 定期実行テンプレート"
     }
   ]
 }

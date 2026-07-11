@@ -1,0 +1,77 @@
+# App Factory ポートフォリオ状態 — 全アプリのステージ・KPI・メトリクスの一元管理
+# 置き場所: prd-vault リポジトリのルート（portfolio.yml）
+#
+# 更新ルール:
+# - stage を書き換えてよいのは portfolio-review スキルと人間だけ
+# - metrics / kpi は portfolio-review が毎週金曜に上書きする
+# - 取れない指標は unmeasured のまま残す（黙って 0 にしない。計測の穴自体が発見）
+updated: null   # portfolio-review が実行日を記入
+
+goal:
+  monthly_revenue_jpy_min: 50000
+  monthly_revenue_jpy_max: 100000
+  deadline: 2027-07-01
+
+# ステージゲートのグローバル初期値。
+# 各アプリの PRD「KPIと計測計画」セクションに固有値があればそちらが優先される。
+gates:
+  m1_weeks: 4          # M1: リリース +4週
+  m1:
+    downloads_total: 100
+    activation_rate: 0.40
+    d1_retention: 0.15
+  m2_weeks: 8          # M2: リリース +8週
+  m2:
+    revenue_7d_jpy: 1        # 収益初発生
+    or_dau_avg: 10           # または DAU ≥ 10 で増加傾向
+  m3_weeks: 16         # M3: リリース +16週
+  m3:
+    revenue_30d_jpy: 5000
+  validating_fail_weeks: 8   # M1 未達のまま経過で maintain へ
+  growing_stall_weeks: 8     # 収益・DAU 横ばいで maintain へ
+  sunset_after_weeks: 12     # maintain で DAU ほぼゼロが続いたら sunset へ
+
+# 横断ジョブ（factory-dispatch）の頻度ルール。portfolio-review が割当表生成に使う。
+schedule_rules:
+  growing:
+    feature-hunt: weekly
+    audit: biweekly
+    growth-advisor: monthly
+  validating:
+    audit: biweekly
+    feature-hunt: biweekly_after_week_5
+  maintain:
+    audit: quarterly
+  # building / review はなし（factory-build と store-release の領分）
+
+apps:
+  # --- 記入例（値はすべてプレースホルダー）。portfolio-review の初回実行が実在アプリから自動生成する ---
+  # repo は $GITHUB_OWNER/、path は $APPS_DIR 配下、bundle_id は $BUNDLE_ID_PREFIX.
+  # （いずれも ~/.config/app-factory/config.env の値）になる
+  - name: ExampleApp
+    repo: your-github-owner/ExampleApp   # 例: $GITHUB_OWNER/ExampleApp
+    path: ~/dev/swift/ExampleApp         # 例: $APPS_DIR/ExampleApp
+    prd: prd/example-app.md          # prd-vault 内の相対パス
+    stage: building                  # building | review | validating | growing | maintain | sunset
+    stage_since: 2026-07-01
+    released: null                   # 初回リリース日（M1〜M3 の起点）
+    bundle_id: com.example.exampleapp    # 例: $BUNDLE_ID_PREFIX.exampleapp
+    asc_app_id: null                 # store-release が自動補完
+    core_action: null                # PRD から転記（例: タイマーの完了）
+    analytics_env_prefix: null       # firebase-bigquery 用。null = Analytics 未接続（計測の穴）
+    revenuecat_project: null         # null = 収益計測未接続
+    kpi:                             # pending | passed | failed | n/a
+      m1: pending
+      m2: pending
+      m3: pending
+    metrics:                         # 週次スナップショット。値が取れないものは unmeasured
+      week: null
+      downloads_7d: unmeasured
+      dau_avg: unmeasured
+      activation_rate: unmeasured
+      d1_retention: unmeasured
+      crash_free: unmeasured
+      revenue_7d_jpy: unmeasured
+      trend: null                    # up | flat | down
+    last_jobs: {}                    # dispatcher 実行履歴から転記（audit / feature-hunt / growth-advisor の最終実行日）
+    notes: ""
