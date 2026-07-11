@@ -25,7 +25,7 @@ feature-hunt → ship-issue → quality-release-cycle）に、欠けていた輪
       ★ = 新スキル4本（app-factory プラグイン）  ☆ = 既存スキルの強化
 
    状態の一元管理: prd-vault/portfolio.yml（全アプリのステージ・KPI・メトリクス）
-   実行の分散管理: claude-cron/data/factory_schedule.tsv（曜日×リポジトリの割当表）★
+   実行の分散管理: $APP_FACTORY_HOME/data/factory_schedule.tsv（曜日×リポジトリの割当表）★
    人間の接点: 週報1通 + PRDマージ + 機能👍 + 新規アプリのASC/Xcode(5分)
 ```
 
@@ -129,6 +129,12 @@ prd-vault 内の **showcase サイト**（`showcase/`、Next.js → Vercel デ�
 
 ## 3. 状態管理
 
+環境依存のパス・識別子（ジョブ実行環境 `$APP_FACTORY_HOME`、PRD リポジトリ `$PRD_VAULT_DIR`、
+GitHub owner `$GITHUB_OWNER`、Bundle ID プレフィックス `$BUNDLE_ID_PREFIX`、アプリ生成先 `$APPS_DIR`、
+claude CLI `$CLAUDE_BIN`）は `~/.config/app-factory/config.env` に一元化されている
+（`cron/install.sh` がテンプレートから生成。詳細は [setup-runbook.md](setup-runbook.md) §0）。
+全ジョブ・スキルはまずこれを読み、以下の本文もこの変数名で参照する。
+
 ### prd-vault/portfolio.yml（何をすべきかの「脳」）
 
 prd-vault に置く理由: PRD・却下履歴・config.yml（スコアリング重み・月5万円の目標）が既にあり、
@@ -140,10 +146,10 @@ prd-vault に置く理由: PRD・却下履歴・config.yml（スコアリング�
 - `apps[].metrics`: 週次スナップショット（downloads_7d / dau_avg / d1_retention /
   activation_rate / crash_free / revenue_7d_jpy / trend）。取れない指標は `unmeasured` と明示
 - `gates`: グローバル初期値（PRD が上書き）
-- 初回は portfolio-review が自動ブートストラップ（prd/・shipped/・`~/dev/swift`・
+- 初回は portfolio-review が自動ブートストラップ（prd/・shipped/・`$APPS_DIR`・
   既存 feature_hunt_apps.txt から生成して main にコミット）
 
-### claude-cron/data/factory_schedule.tsv（いつ誰がやるかの「時刻表」）★新設
+### $APP_FACTORY_HOME/data/factory_schedule.tsv（いつ誰がやるかの「時刻表」）★新設
 
 **リポジトリ横断ジョブ（feature-hunt / audit / growth-advisor）を1日1リポジトリに分散する割当表。**
 
@@ -166,10 +172,9 @@ prd-vault に置く理由: PRD・却下履歴・config.yml（スコアリング�
   portfolio-review が毎週再生成する
 
 ```
-# factory_schedule.tsv の例（portfolio-review が毎週金曜に翌週分を生成。手編集可）
-2026-07-20	tomarigi	~/dev/flutter/tomarigi	audit
-2026-07-21	AntiScroll	~/dev/swift/antiscroll	feature-hunt
-2026-07-23	Hirune	~/dev/swift/Hirune	feature-hunt
+# factory_schedule.tsv の例（portfolio-review が毎週金曜に翌週分を生成。手編集可。パスは portfolio.yml の path）
+2026-07-20	ExampleFlutterApp	~/dev/flutter/ExampleFlutterApp	audit
+2026-07-21	ExampleApp	~/dev/swift/ExampleApp	feature-hunt
 ```
 
 これにより既存の audit plist 3本と feature-hunt の全アプリ直列実行は廃止でき、
@@ -211,6 +216,9 @@ launchd はスリープ中に時刻を過ぎた場合、次の起床時にまと
   ON でも全条件を満たす必要がある: テスト green + CI green +
   セルフレビューの高 severity 指摘ゼロ + 差分 600 行未満 + マイグレーション・課金・権限まわりを触っていない
 - 満たさない場合は PR を open のまま残し、Slack と週報で人間に回す
+- **人間との修正のやり取りは GitHub 上で完結**: 実装前なら issue 本文の編集/コメント、実装後なら
+  PR へのレビューコメント（次回実行時に修正 or 理由付き返信の1往復で自動対応。人間コメントが
+  未解決の PR は auto-merge しない）、触らせたくないものは `factory-blocked` ラベル
 - 同一 issue で2回失敗したら `factory-blocked` ラベルを付けて以後スキップ（週報で報告）
 - 朝の回と夜の回で同じ issue を二重に取らないよう、着手時に `factory-wip` ラベルを付ける（冪等性）
 
@@ -238,7 +246,7 @@ launchd はスリープ中に時刻を過ぎた場合、次の起床時にまと
 
 ### portfolio-review（計測と意思決定 — ②の欠落を埋める「脳」）
 
-- 全アプリのメトリクスを取得: Firebase Analytics（claude-cron の firebase-bigquery スキル）、
+- 全アプリのメトリクスを取得: Firebase Analytics（ジョブ実行環境の firebase-bigquery スキル。作者環境の前提）、
   ASC API（DL数・クラッシュ）、RevenueCat API（収益）。取れない指標は「未計測」と明示し、
   **計測の穴は「計測実装 issue」として起票する**（黙って0にしない）
 - **各アプリの PRD の KPI マイルストーン（M1〜M3）に対して達成状況を判定**し、
@@ -311,12 +319,13 @@ quality-release-cycle は dev-workflow-tools から移動）。強化はスキ�
   設定画面とストア提出のプライバシー URL はここを指す）
 
 ⚠️ **このリポジトリはパブリック**。スキル・cron テンプレートにシークレット
-（webhook 実 URL・API キー・トークン）を書かない。参照は環境変数名のみ、実値は claude-cron の `.env`。
+（webhook 実 URL・API キー・トークン）を書かない。参照は環境変数名のみ、実値はジョブ実行環境の
+`$APP_FACTORY_HOME/.env`。
 
 リポジトリの外に残るもの:
 
-- `~/dev/others/claude-cron/`: 実行環境（.env・logs・data・launchd 実体）。
-  `cron/install.sh` が配備し、移行手順は `cron/README.md`
+- ジョブ実行環境 `$APP_FACTORY_HOME`（デフォルト: `~/dev/others/claude-cron`）:
+  .env・logs・data・launchd 実体。`cron/install.sh` が配備し、移行手順は `cron/README.md`
   （ホームスキルの削除・run_prd_approval_check.sh の asc_cloud.py パス修正を含む）
 - `prd-vault`（private）: PRD・portfolio.yml（portfolio-review が自動生成）・
   showcase サイト（app-idea-hunt が自動ブートストラップ。Vercel 接続のみ人間が1回）
@@ -327,8 +336,9 @@ quality-release-cycle は dev-workflow-tools から移動）。強化はスキ�
   日次の claude 起動は最大4回（factory-build×2 + dispatch×1 + 既存 prd-approval-check）+
   空スロット日は bash 判定のみで claude 不起動
 - factory-build が最も重い（1回で issue 2件の実装）。消費が問題になったら1回の上限を下げる
-- すべてのジョブは既存の claude-cron 規約に従う: `.env` 読込 → `claude -p --permission-mode
-  bypassPermissions` → ログ → 失敗時 Slack。**シークレットは .env のみ、リポジトリに置かない**
+- すべてのジョブはジョブ実行環境（`$APP_FACTORY_HOME`）の共通規約に従う: config.env・`.env` 読込 →
+  `claude -p --permission-mode bypassPermissions` → ログ → 失敗時 Slack。
+  **シークレットは .env のみ、リポジトリに置かない**
 - auto-merge・ストア提出という「外に出る」操作には必ず機械的ガード（CI green / veto ウィンドウ）
 - 全ジョブ冪等: 二重実行しても Issue・PR・提出が重複しない（🤖 マーカー・`factory-wip` ラベル・
   ASC 状態照会で判定）

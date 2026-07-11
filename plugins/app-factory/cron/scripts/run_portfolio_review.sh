@@ -5,9 +5,11 @@
 
 set -euo pipefail
 
-PROJECT_DIR="$HOME/dev/others/claude-cron"
+CONFIG_FILE="$HOME/.config/app-factory/config.env"
+[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
+PROJECT_DIR="${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}"
 LOG_FILE="$PROJECT_DIR/logs/portfolio_review.log"
-CLAUDE="$HOME/.nodebrew/current/bin/claude"
+CLAUDE="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"; }
 
@@ -23,7 +25,7 @@ if ! $CLAUDE -p --permission-mode bypassPermissions \
   << 'PROMPT' >> "$LOG_FILE" 2>&1
 app-factory:portfolio-review スキルを最初から最後まで実行してください。
 
-- prd-vault は ~/dev/prd-vault、portfolio.yml が無ければ初回ブートストラップから行うこと
+- prd-vault の場所は ~/.config/app-factory/config.env の PRD_VAULT_DIR（デフォルト ~/dev/prd-vault）。portfolio.yml が無ければ初回ブートストラップから行うこと
 - メトリクスは実データのみ。取れない指標は unmeasured のまま残し、計測の穴は Issue 化すること
 - 翌週の割当表 data/factory_schedule.tsv と data/factory_apps.tsv を必ず更新すること
 - 週報（要アクション一覧含む）を Slack に1通投稿して終えること

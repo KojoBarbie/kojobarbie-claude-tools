@@ -18,16 +18,18 @@ growing ステージ（マイルストーン通過＝有望）と判定された
 
 ## 前提リソース
 
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数は括弧内のデフォルト値を使う）。
+
 | リソース | パス |
 |---|---|
-| ポートフォリオ状態 | `~/dev/prd-vault/portfolio.yml`（stage / kpi=M1〜M3達成状況 / metrics） |
-| 該当 PRD | portfolio.yml の `prd` が指すファイル（`~/dev/prd-vault/` 配下） |
+| ポートフォリオ状態 | `$PRD_VAULT_DIR/portfolio.yml`（`PRD_VAULT_DIR` のデフォルト: `~/dev/prd-vault`。stage / kpi=M1〜M3達成状況 / metrics） |
+| 該当 PRD | portfolio.yml の `prd` が指すファイル（`$PRD_VAULT_DIR/` 配下） |
 | 製品コンテキスト | `<cwd>/.claude/product-context.md`（**毎回必読**） |
 | 提案・却下の履歴 | `<cwd>/.claude/feature-hunt-log.md`（却下理由＝好みの学習データ） |
-| 環境変数 | `~/dev/others/claude-cron/.env`（`set -a && source && set +a` で読み込む） |
-| Slack投稿 | `python3 ~/dev/others/claude-cron/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$WEBHOOK"`。webhook は `SLACK_WEBHOOK_URL_FEATURE` があればそれ、なければ `SLACK_WEBHOOK_URL` |
+| 環境変数 | `$APP_FACTORY_HOME/.env`（`APP_FACTORY_HOME` のデフォルト: `~/dev/others/claude-cron`。`set -a && source && set +a` で読み込む） |
+| Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$WEBHOOK"`。webhook は `SLACK_WEBHOOK_URL_FEATURE` があればそれ、なければ `SLACK_WEBHOOK_URL`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
 | Issue/ログ書式 | feature-hunt スキルの `references/proposal-format.md`（**この書式に完全に合わせる**） |
-| Analytics | claude-cron の `firebase-bigquery` スキル（portfolio.yml に `analytics_env_prefix` がある場合のみ） |
+| Analytics | `$APP_FACTORY_HOME` の `firebase-bigquery` スキル（portfolio.yml に `analytics_env_prefix` がある場合のみ。作者環境の前提 — 無い環境ではスキップ） |
 
 ## モード判定
 
@@ -37,9 +39,10 @@ growing ステージ（マイルストーン通過＝有望）と判定された
 どちらのモードでも、作業ディレクトリは対象アプリのリポジトリルート。最初に最新化する:
 
 ```bash
+[ -f ~/.config/app-factory/config.env ] && . ~/.config/app-factory/config.env
 git pull
-git -C ~/dev/prd-vault pull
-set -a && source ~/dev/others/claude-cron/.env && set +a
+git -C "${PRD_VAULT_DIR:-$HOME/dev/prd-vault}" pull
+set -a && source "${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}/.env" && set +a
 ```
 
 ## Step 0: ステージガードと事前チェック
@@ -124,10 +127,12 @@ gh issue create --title "[収益化/M] ..." --body-file /tmp/proposal.md --label
 
 ```bash
 WEBHOOK="${SLACK_WEBHOOK_URL_FEATURE:-$SLACK_WEBHOOK_URL}"
-python3 ~/dev/others/claude-cron/.claude/skills/slack-post/scripts/slack_post.py \
+python3 "${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}"/.claude/skills/slack-post/scripts/slack_post.py \
   --file /tmp/growth_report.md --header "growth-advisor: <アプリ名> の施策提案" \
   --webhook-url "$WEBHOOK"
 ```
+
+（`slack_post.py` は作者環境の前提。無い環境では curl で `$WEBHOOK` に直接 POST する）
 
 ## 承認フロー（このスキルの外）
 

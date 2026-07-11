@@ -6,10 +6,12 @@
 
 set -euo pipefail
 
-PROJECT_DIR="$HOME/dev/others/claude-cron"
+CONFIG_FILE="$HOME/.config/app-factory/config.env"
+[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
+PROJECT_DIR="${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}"
 APPS_FILE="$PROJECT_DIR/data/factory_apps.tsv"
 LOG_FILE="$PROJECT_DIR/logs/factory_build.log"
-CLAUDE="$HOME/.nodebrew/current/bin/claude"
+CLAUDE="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"; }
 

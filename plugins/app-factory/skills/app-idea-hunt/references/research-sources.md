@@ -50,16 +50,16 @@ WebSearchで以下のようなクエリを季節・時期を変えて数本:
 - Reddit: `r/iosapps`, `r/QuantifiedSelf`, `r/getdisciplined`, `r/sleep` などを WebSearch (`site:reddit.com ○○ app`) で。「こういうアプリないの?」という投稿は未充足需要そのもの
 - 日本側: `○○ アプリ おすすめ` で上位に出る記事の内容が古い/貧弱なら、そのジャンルは日本語圏の情報空白=チャンス
 
-## 6. Apptopia トレンド（claude-cron 内で実行時のみ）
+## 6. Apptopia トレンド（ジョブ実行環境内で実行時のみ）
 
-`~/dev/others/claude-cron` で実行されている場合、playwright-cli で:
+ジョブ実行環境（`$APP_FACTORY_HOME`）で実行されている場合、playwright-cli で:
 
 ```
 https://apptopia.com/top-charts/trending-apps
 https://apptopia.com/top-charts/trending-apps/itunes-connect/health-fitness/united-states
 ```
 
-（詳細手順は claude-cron の `overseas-app-trends` スキル参照。使えない環境ならスキップしてよい）
+（詳細手順は `$APP_FACTORY_HOME` の `overseas-app-trends` スキル参照。作者環境の前提なので、無い環境ならスキップしてよい）
 
 ## 収集時の心得
 

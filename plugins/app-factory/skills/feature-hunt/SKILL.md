@@ -19,18 +19,20 @@ description: "既存アプリ（swift/flutter配下）の新機能を週次で�
 
 ## 前提リソース
 
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数は括弧内のデフォルト値を使う）。
+
 | リソース | パス |
 |---|---|
 | アプリごとの設定 | `<アプリ>/.claude/feature-hunt.yml`（オンボーディングで生成） |
 | 製品コンテキスト | `<アプリ>/.claude/product-context.md`（同上。**毎回必読**） |
 | 提案・却下の履歴 | `<アプリ>/.claude/feature-hunt-log.md` |
-| 週次実行の対象リスト | `~/dev/others/claude-cron/feature_hunt_apps.txt` |
-| 環境変数 | `~/dev/others/claude-cron/.env`（`set -a && source && set +a` で読み込む） |
-| Slack投稿 | `python3 ~/dev/others/claude-cron/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$WEBHOOK"`。webhookは `SLACK_WEBHOOK_URL_FEATURE` があればそれ、なければ `SLACK_WEBHOOK_URL` |
+| 週次実行の対象リスト | `$APP_FACTORY_HOME/feature_hunt_apps.txt`（`APP_FACTORY_HOME` のデフォルト: `~/dev/others/claude-cron`） |
+| 環境変数 | `$APP_FACTORY_HOME/.env`（`set -a && source && set +a` で読み込む） |
+| Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$WEBHOOK"`。webhookは `SLACK_WEBHOOK_URL_FEATURE` があればそれ、なければ `SLACK_WEBHOOK_URL`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
 | 競合検索 | `bash {skill_dir}/scripts/jp_appstore_search.sh "検索語" [limit] [country]` |
 | レビュー取得 | `bash {skill_dir}/scripts/appstore_reviews.sh <app_id> [country]`（最新50件） |
 | sub-issueリンク | `bash {skill_dir}/scripts/link_sub_issue.sh <親番号> <子番号>` |
-| Analytics | claude-cron の `firebase-bigquery` スキル（`analytics_env_prefix` 設定時のみ） |
+| Analytics | `$APP_FACTORY_HOME` の `firebase-bigquery` スキル（`analytics_env_prefix` 設定時のみ。作者環境の前提 — 無い環境では Analytics 系はスキップ） |
 
 ## モード判定
 
@@ -64,7 +66,7 @@ gh issue list --label feature-proposal --state all --limit 30 --json number,titl
 
 1. **レビュー分析** — `appstore_reviews.sh` で自アプリ（リリース済みなら）と競合各社（yml の `competitors`）のレビューを取得。★1〜3の不満、「〜だったらいいのに」系の要望を抽出し、頻出テーマと具体的な引用をまとめる
 2. **コードベース考察** — Explore系エージェントがコードを読み、既存機能の棚卸しと「既にあるデータ・基盤で安く作れて効きそうな機能」を挙げる。実装コストの見積もり（S/M/L）付き
-3. **Analytics分析** — yml に `analytics_env_prefix` があるときのみ。claude-cron の `firebase-bigquery` スキルの手順でファネル・エンゲージメントを取得し、「離脱が集中している箇所」「使われていない既存機能」を特定する。未設定ならスキップし、Slack報告に「Analytics未接続」と一言添える
+3. **Analytics分析** — yml に `analytics_env_prefix` があるときのみ。`$APP_FACTORY_HOME` の `firebase-bigquery` スキル（作者環境の前提。無ければこの系統をスキップ）の手順でファネル・エンゲージメントを取得し、「離脱が集中している箇所」「使われていない既存機能」を特定する。未設定ならスキップし、Slack報告に「Analytics未接続」と一言添える
 
 ### Step 3: 統合・選定（最大3件）
 

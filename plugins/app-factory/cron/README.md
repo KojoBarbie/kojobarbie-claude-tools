@@ -1,7 +1,15 @@
 # App Factory 定期実行テンプレート
 
-App Factory（docs/app-factory.md）の定期実行を claude-cron（`~/dev/others/claude-cron`）に
-配備するためのテンプレート一式。`./install.sh` で導入する。
+App Factory（docs/app-factory.md）の定期実行をジョブ実行環境（`$APP_FACTORY_HOME`。
+デフォルト: `~/dev/others/claude-cron`）に配備するためのテンプレート一式。`./install.sh` で導入する。
+
+## 環境設定（`~/.config/app-factory/config.env`）
+
+環境依存の値（`APP_FACTORY_HOME` / `PRD_VAULT_DIR` / `GITHUB_OWNER` / `BUNDLE_ID_PREFIX` /
+`APPS_DIR` / `CLAUDE_BIN`）はすべてこのファイルに集約されている。`install.sh` が
+`assets/config.env.template` から自動生成するので、デフォルト以外の環境では値を編集してから
+再実行する。全 run スクリプトとスキルが最初にこれを読む（無ければデフォルト値で動く）。
+シークレットはここではなく `$APP_FACTORY_HOME/.env` に置く。
 
 ## ジョブ一覧（深夜帯中心の設計）
 
@@ -10,12 +18,13 @@ App Factory（docs/app-factory.md）の定期実行を claude-cron（`~/dev/othe
 | 毎日 5:00 / 23:00 | factory-build（issue の自律実装） | factory_apps.tsv に building/growing/validating があるときだけ |
 | 平日 3:00 | factory-dispatch（feature-hunt / audit / growth-advisor を1日1リポジトリ） | 割当表に当日スロットがあるときだけ |
 | 毎日 6:00 | store-release（リリース列車・veto・審査追跡） | review ステージ / open な release-train / MVP 完了 / 水曜、のいずれか |
+| 毎日 12:00 | factory-reminder（人力タスクの滞留リマインド） | 起動しない（bash + gh のみ。滞留があるときだけ Slack に1通） |
 | 金 17:00 | portfolio-review（計測→判定→割当表生成→週報） | 常時（週1） |
 
 重いジョブ（実装・監査・提案）は深夜に回し、人が読む通知（veto 確認・週報）だけ
 朝〜夕方に届く設計。launchd はスリープ中に時刻を過ぎた場合、次の起床時にまとめて1回実行する。
 
-## データファイル（claude-cron/data/）
+## データファイル（`$APP_FACTORY_HOME/data/`）
 
 | ファイル | 書き手 | 読み手 | 形式 |
 |---|---|---|---|
@@ -30,7 +39,7 @@ App Factory（docs/app-factory.md）の定期実行を claude-cron（`~/dev/othe
 ## 導入手順
 
 ```bash
-./install.sh            # 新ジョブ4本を配備（旧ジョブはそのまま）
+./install.sh            # 新ジョブ一式を配備（旧ジョブはそのまま）
 ./install.sh --dry-run  # 何が起きるか確認だけ
 ./install.sh --migrate  # 移行: 旧 feature-hunt 一括 / アプリ別 audit 3本を無効化
 ```

@@ -9,31 +9,33 @@ Goサイン（prd-vaultのPRマージ）が出たPRDを、**スマホからそ�
 
 ## 前提
 
+**最初に `~/.config/app-factory/config.env` を読み込む**（`[ -f ~/.config/app-factory/config.env ] && . ~/.config/app-factory/config.env`。無ければ各変数は括弧内のデフォルト値を使う）。
+
 | リソース | パス |
 |---|---|
-| PRDリポジトリ | `~/dev/prd-vault`（GitHub: `KojoBarbie/prd-vault`、デフォルトブランチ `main`） |
-| プロジェクト配置先 | `~/dev/swift/{AppName}/` |
-| 雛形生成 | `bash {skill_dir}/scripts/new_project.sh <AppName>`（XcodeGen使用、Team ID等設定済み） |
-| 規約・構成のお手本 | `~/dev/swift/Hirune/`（CLAUDE.md・docs/・.claude/skills の構成が最新の標準） |
-| Slack webhook / ASC APIキー | `~/dev/others/claude-cron/.env`（`SLACK_WEBHOOK_URL_PRD`, `APP_STORE_*`） |
-| Slack投稿 | `python3 ~/dev/others/claude-cron/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"` |
+| PRDリポジトリ | `$PRD_VAULT_DIR`（デフォルト: `~/dev/prd-vault`。GitHub: `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、デフォルトブランチ `main`） |
+| プロジェクト配置先 | `$APPS_DIR/{AppName}/`（デフォルト: `~/dev/swift`） |
+| 雛形生成 | `bash {skill_dir}/scripts/new_project.sh <AppName>`（XcodeGen使用。`APPLE_TEAM_ID`・`BUNDLE_ID_PREFIX` を環境変数から注入） |
+| 規約・構成のお手本 | `$APPS_DIR/Hirune/`（CLAUDE.md・docs/・.claude/skills の構成が最新の標準。作者環境の前提 — 無い環境ではお手本参照を省略し、本スキル記載の構成要件だけで書き起こす） |
+| Slack webhook / ASC APIキー | `$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/others/claude-cron/.env`。`SLACK_WEBHOOK_URL_PRD`, `APP_STORE_*`） |
+| Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
 
 ## Step 1: PRDの特定と熟読
 
 - 承認チェックジョブから呼ばれた場合: 対象のマージ済みPR番号とPRDパス（`prd/{slug}.md`）が指示に含まれる
-- 手動（「○○をGoして」）の場合: `~/dev/prd-vault/prd/` とオープン中のPRから該当PRDを特定する。オープン中のPRを指している場合は先に `gh pr merge {番号} --merge` でマージする（それがGoの正式な記録になる）
+- 手動（「○○をGoして」）の場合: `$PRD_VAULT_DIR/prd/` とオープン中のPRから該当PRDを特定する。オープン中のPRを指している場合は先に `gh pr merge {番号} --merge` でマージする（それがGoの正式な記録になる）
 - PRDを全文読み、MVPスコープ・技術メモ・デザイン方向性を頭に入れる
 
 ## Step 2: アプリ名の決定と雛形生成
 
-1. PRDの仮名から **PascalCaseの英語名** を決める（例: `Hirune`）。`~/dev/swift/` の既存ディレクトリおよび `gh repo list KojoBarbie` と衝突しないこと
+1. PRDの仮名から **PascalCaseの英語名** を決める（例: `Hirune`）。`$APPS_DIR/` の既存ディレクトリおよび `gh repo list $GITHUB_OWNER` と衝突しないこと
 2. `bash {skill_dir}/scripts/new_project.sh {AppName}` で雛形を生成
 3. PRDの技術メモに応じて `project.yml` を調整する（HealthKit等のcapabilityが必要なら `entitlements` を、Watch/ウィジェットが必要なら extension target を追加）。調整したら `xcodegen generate` を再実行
 
 ## Step 3: ビルド確認
 
 ```bash
-cd ~/dev/swift/{AppName}
+cd "$APPS_DIR"/{AppName}
 xcodebuild -project {AppName}.xcodeproj -scheme {AppName} \
   -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO 2>&1 | tail -5
 ```
@@ -49,7 +51,7 @@ xcodebuild -project {AppName}.xcodeproj -scheme {AppName} \
 - 開発ルール: issueベース（`ship-issue`）、PRレビューはプラグインのスキル（pr-batch-review / pr-comment-reply / pr-review-unresolved）を使う、`xcodebuild test` 後は `review-ios-test-results` スキルで分析
 - **「実装は `docs/architecture.md` と `docs/test-strategy.md` に従う。逸脱する場合は PR で理由を明示し、文書側も同じ PR で更新する」という一文を必ず入れる**
 
-`review-ios-test-results` スキルだけ `Hirune/.claude/skills/` からコピーする（プラグインに含まれないため）。他のスキルコピーは不要。PRD本体は `docs/prd.md` に配置する。
+`review-ios-test-results` スキルだけ `Hirune/.claude/skills/` からコピーする（プラグインに含まれないため。コピー元は作者環境の前提 — 無い環境ではこの手順を省略し、CLAUDE.md からも該当の言及を外す）。他のスキルコピーは不要。PRD本体は `docs/prd.md` に配置する。
 
 ### docs/architecture.md（アーキテクチャ決定の明文化）
 
@@ -99,9 +101,9 @@ AdMob の app-ads.txt 配信と、設定画面・ストア提出が参照する�
 ## Step 6: GitHubリポジトリ作成とpush
 
 ```bash
-cd ~/dev/swift/{AppName}
+cd "$APPS_DIR"/{AppName}
 git init && git add -A && git commit -m "プロジェクト初期構成（app-kickoffによる自動生成）"
-gh repo create KojoBarbie/{AppName} --private --source . --push
+gh repo create "$GITHUB_OWNER"/{AppName} --private --source . --push
 ```
 
 ## Step 7: MVP機能のissue登録
@@ -117,7 +119,7 @@ PRDのコア機能を分解し、下記の**必須issueセット**と合わせ�
 1. **計測実装**（ラベル `measurement` — 無ければ作成。factory-build が最優先で拾う）:
    PRD 10.2 の計測イベント一覧（イベント名・発火タイミング・対応KPI）をそのまま転記 /
    SDK導入・初期化（FirebaseプロジェクトはStep 8で作成済み・plist配置済み）/
-   BigQueryエクスポート有効化（コンソール操作）/ 「`analytics_env_prefix` を claude-cron の .env に追加し、
+   BigQueryエクスポート有効化（コンソール操作）/ 「`analytics_env_prefix` を `$APP_FACTORY_HOME/.env` に追加し、
    prd-vault/portfolio.yml の該当アプリに記入する」という仕上げタスク
 2. **オンボーディング実装**: 本文の冒頭に
    **「実装時は必ず `onboarding-advisor` スキルを起動し、設計（初回起動フロー・コア行動への最短経路・
@@ -144,14 +146,14 @@ PRDの収益化が広告を含む場合は **広告実装 issue** も追加（Ad
 Firebase / RevenueCat / AdMob / Vercel の具体的なコマンド・API・フォールバックは
 **`${CLAUDE_PLUGIN_ROOT}/skills/app-kickoff/references/external-services.md` に従う**（命名規約もそこで固定）。
 
-1. **Bundle IDの登録（自動）**: `xcode-cloud-setup` スキルのスクリプトで `com.kojobarbie.{slug}` をASCに登録する:
+1. **Bundle IDの登録（自動）**: `xcode-cloud-setup` スキルのスクリプトで `${BUNDLE_ID_PREFIX}.{slug}` をASCに登録する:
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/xcode-cloud-setup/scripts/asc_cloud.py register-bundle-id com.kojobarbie.{slug} {AppName}
+   python3 ${CLAUDE_PLUGIN_ROOT}/skills/xcode-cloud-setup/scripts/asc_cloud.py register-bundle-id "${BUNDLE_ID_PREFIX}.{slug}" {AppName}
    ```
 2. **オンボーディング待ちリストに登録（自動）**: 承認チェックジョブ（毎日9時/21時）がASC APIでオンボーディング完了をポーリングし、検知したらTestFlightワークフロー2本を自動作成してSlack通知する:
    ```bash
-   mkdir -p ~/dev/others/claude-cron/.data
-   printf '%s\t%s\t0\n' {AppName} "$(date +%s)" >> ~/dev/others/claude-cron/.data/pending_xcode_cloud.txt
+   mkdir -p "$APP_FACTORY_HOME"/.data
+   printf '%s\t%s\t0\n' {AppName} "$(date +%s)" >> "$APP_FACTORY_HOME"/.data/pending_xcode_cloud.txt
    ```
    （タブ区切り: アプリ名・登録epoch・最終リマインドepoch。3日以上未完了だと3日おきにチェックリストがSlackに再送される）
 3. **Firebase プロジェクト作成と紐付け（自動）**: `{slug}-app` を作成 → iOS アプリ登録 →
@@ -172,17 +174,17 @@ Firebase / RevenueCat / AdMob / Vercel の具体的なコマンド・API・フ�
 ## Step 9: prd-vault側の後処理
 
 1. マージ済みPRDのfrontmatter表に開発リポジトリURL・キックオフ日・デザインアーティファクトURLを追記し、mainにコミット & push
-2. `~/dev/prd-vault/portfolio.yml` に新アプリのエントリを追記する（`stage: building`、PRDから転記した prd パス・`bundle_id`・`core_action`）。portfolio.yml がまだ無ければ何もしない — portfolio-review のブートストラップに任せる
-3. 対象PRに `processed` ラベルを付与し、`🤖 キックオフ完了: https://github.com/KojoBarbie/{AppName}` とコメント（🤖始まりが再処理防止マーカー）
+2. `$PRD_VAULT_DIR/portfolio.yml` に新アプリのエントリを追記する（`stage: building`、PRDから転記した prd パス・`bundle_id`・`core_action`）。portfolio.yml がまだ無ければ何もしない — portfolio-review のブートストラップに任せる
+3. 対象PRに `processed` ラベルを付与し、`🤖 キックオフ完了: https://github.com/$GITHUB_OWNER/{AppName}` とコメント（🤖始まりが再処理防止マーカー）
 
 ## Step 10: remote-controlセッション起動
 
 スマホから即開発を始められるよう、プロジェクトディレクトリでRemote Control付きセッションを起動し、セッションURLを取得する:
 
 ```bash
-cd ~/dev/swift/{AppName}
+cd "$APPS_DIR"/{AppName}
 RC_LOG=/tmp/rc_{AppName}.log
-(script -q "$RC_LOG" ~/.nodebrew/current/bin/claude --remote-control {AppName} &)
+(script -q "$RC_LOG" "${CLAUDE_BIN:-claude}" --remote-control {AppName} &)
 # セッションURLがログに出るまで少し待ってから抽出
 until grep -qo 'https://claude.ai/code/session_[A-Za-z0-9]*' "$RC_LOG"; do sleep 2; done
 grep -o 'https://claude.ai/code/session_[A-Za-z0-9]*' "$RC_LOG" | head -1
@@ -202,7 +204,7 @@ grep -o 'https://claude.ai/code/session_[A-Za-z0-9]*' "$RC_LOG" | head -1
 
 ```
 :clipboard: *手動でやること*
-☐ 1. App Store Connectでアプリを作成（Bundle ID `com.kojobarbie.{slug}` は登録済み・選ぶだけ）
+☐ 1. App Store Connectでアプリを作成（Bundle ID `${BUNDLE_ID_PREFIX}.{slug}` は登録済み・選ぶだけ）
 ☐ 2. Xcodeで {AppName} を開き Product > Xcode Cloud からオンボーディング（GitHub接続込み）
 ☐ 3. AdMobで「アプリを追加」→ 広告ユニット作成 → デベロッパーサイトに https://{slug}-lp.vercel.app を登録
      → アプリID (ca-app-pub-…) を広告実装issueにコメント

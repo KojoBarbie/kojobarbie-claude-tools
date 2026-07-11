@@ -25,7 +25,9 @@ TestFlight 配信（Xcode Cloud）までは自動だが、その先の App Store
 
 ## 前提と認証
 
-ASC API の認証は `~/dev/others/claude-cron/.env` の環境変数を使う（xcode-cloud-setup スキルと同一）:
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/others/claude-cron`、`PRD_VAULT_DIR=~/dev/prd-vault`）。
+
+ASC API の認証は `$APP_FACTORY_HOME/.env` の環境変数を使う（xcode-cloud-setup スキルと同一）:
 
 - `APP_STORE_KEY_ID` — API Key ID
 - `APP_STORE_ISSUER_ID` — Issuer ID
@@ -34,10 +36,11 @@ ASC API の認証は `~/dev/others/claude-cron/.env` の環境変数を使う（
 JWT 生成（ES256・`aud: appstoreconnect-v1`・有効期限20分・ヘッダ `kid`）は
 `${CLAUDE_PLUGIN_ROOT}/skills/xcode-cloud-setup/scripts/asc_cloud.py` の `token()` のパターンに従う。
 必要なら同スキルの scripts をそのまま再利用してよい（依存の pyjwt / cryptography / requests は
-`~/dev/others/claude-cron/.venv/bin/python3` に導入済み）。
+作者環境では `$APP_FACTORY_HOME/.venv/bin/python3` に導入済み。無い環境では venv を作って導入する）。
 
 ```bash
-set -a && source ~/dev/others/claude-cron/.env && set +a
+[ -f ~/.config/app-factory/config.env ] && . ~/.config/app-factory/config.env
+set -a && source "${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}/.env" && set +a
 ```
 
 Slack 通知はすべて `$SLACK_WEBHOOK_URL_PRD` に送る。issue へのコメントは必ず `🤖` プレフィックスを付ける
@@ -51,11 +54,11 @@ Slack 通知はすべて `$SLACK_WEBHOOK_URL_PRD` に送る。issue へのコメ
 
 ### 1. 状態把握
 
-1. `~/dev/prd-vault/portfolio.yml` を読み、全アプリの stage / repo / bundle_id / asc_app_id を把握する
+1. `$PRD_VAULT_DIR/portfolio.yml` を読み、全アプリの stage / repo / bundle_id / asc_app_id を把握する
 2. 各アプリのリポジトリで進行中のリリース列車を確認する:
 
 ```bash
-gh issue list --repo KojoBarbie/<repo> --label release-train --state open \
+gh issue list --repo "$GITHUB_OWNER"/<repo> --label release-train --state open \
   --json number,title,labels,createdAt,body
 ```
 
@@ -81,7 +84,7 @@ gh issue list --repo KojoBarbie/<repo> --label release-train --state open \
 ### 3. メタデータ準備
 
 列車が open なアプリについて、アプリリポジトリの `docs/store-metadata/ja/` を確認する。
-無ければ PRD（`~/dev/prd-vault/prd/` または `shipped/`）から生成してコミットする（人がレビューできる形で残す）:
+無ければ PRD（`$PRD_VAULT_DIR/prd/` または `shipped/`）から生成してコミットする（人がレビューできる形で残す）:
 
 | ファイル | 内容 | 制限 |
 |---|---|---|

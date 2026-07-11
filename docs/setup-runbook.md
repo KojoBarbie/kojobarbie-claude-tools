@@ -4,21 +4,40 @@
 設計の背景は [app-factory.md](app-factory.md)、cron の詳細は
 [plugins/app-factory/cron/README.md](../plugins/app-factory/cron/README.md) を参照。
 
+## 0. 環境設定（`~/.config/app-factory/config.env`）
+
+App Factory の環境依存パスはすべてこのファイルに集約されている。**`cron/install.sh` が
+テンプレート（`plugins/app-factory/assets/config.env.template`）から自動生成**するので、
+自分の環境に合わせて値を編集する（デフォルトのままなら編集不要）。全ての cron ジョブと
+スキルが最初にこれを読む。シークレット（webhook・API キー）はここではなく
+`$APP_FACTORY_HOME/.env` に置く（§2）。
+
+| 変数 | 意味 | デフォルト |
+|---|---|---|
+| `APP_FACTORY_HOME` | ジョブ実行環境。`.env`・`data/`・`logs/` の置き場所 | `$HOME/dev/others/claude-cron` |
+| `PRD_VAULT_DIR` | PRD・portfolio.yml・showcase を置くリポジトリ（private 推奨） | `$HOME/dev/prd-vault` |
+| `GITHUB_OWNER` | アプリリポジトリの GitHub owner | `KojoBarbie` |
+| `BUNDLE_ID_PREFIX` | 新規アプリの Bundle ID プレフィックス | `com.kojobarbie` |
+| `APPS_DIR` | 新規アプリ（Xcode プロジェクト）の生成先 | `$HOME/dev/swift` |
+| `CLAUDE_BIN` | claude CLI のパス（launchd から PATH が引けないため明示） | `$HOME/.nodebrew/current/bin/claude` |
+
+以降の本文では `$APP_FACTORY_HOME` 等の変数名で参照する。
+
 ## 1. 前提ツール（インストール済みであること）
 
 | ツール | 用途 | 確認コマンド |
 |---|---|---|
 | GitHub CLI `gh`（認証済み） | 全スキルの issue/PR 操作 | `gh auth status` |
 | `jq` | cron スクリプトの JSON 判定 | `jq --version` |
-| Claude Code CLI | 全ジョブの実行本体（launchd が `~/.nodebrew/current/bin/claude` を参照） | `claude --version` |
+| Claude Code CLI | 全ジョブの実行本体（launchd が `$CLAUDE_BIN` を参照） | `claude --version` |
 | Xcode + XcodeGen | app-kickoff のプロジェクト生成・ビルド確認 | `xcodegen --version` |
 | Node.js | showcase（Next.js）・LP（Vite）のビルド | `node --version` |
 | Firebase CLI（`firebase login` 済み） | kickoff の Firebase プロジェクト自動作成 | `firebase projects:list` |
 | Vercel CLI（認証済み） | kickoff の LP 自動接続・デプロイ | `vercel whoami` |
-| claude-cron の `.venv`（pyjwt / cryptography / requests） | ASC API（asc_cloud.py） | `~/dev/others/claude-cron/.venv/bin/python3 -c "import jwt"` |
+| ジョブ実行環境の `.venv`（pyjwt / cryptography / requests） | ASC API（asc_cloud.py） | `$APP_FACTORY_HOME/.venv/bin/python3 -c "import jwt"` |
 | `fvm`（Flutter アプリを対象にする場合のみ） | Flutter 系の監査・テスト | `fvm --version` |
 
-## 2. `.env` に必要なキー（`~/dev/others/claude-cron/.env`）
+## 2. `.env` に必要なキー（`$APP_FACTORY_HOME/.env`）
 
 ⚠️ 実値は `.env` のみに置く。このリポジトリはパブリックなので絶対にコミットしない。
 
@@ -48,11 +67,11 @@
 - [ ] 4. `.env` に `APPLE_TEAM_ID` を追加（§2 の任意キーもこのタイミングで）
 - [ ] 5. 定期実行の配備: `plugins/app-factory/cron/install.sh`（まず `--dry-run` で確認推奨）
 - [ ] 6. **portfolio-review を1回対話実行**して portfolio.yml のブートストラップ内容
-  （アプリ一覧・ステージ推定）を確認: `cd ~/dev/others/claude-cron && claude "app-factory:portfolio-review を実行して"`
+  （アプリ一覧・ステージ推定）を確認: `cd "$APP_FACTORY_HOME" && claude "app-factory:portfolio-review を実行して"`
 - [ ] 7. **showcase の Vercel 接続**: 初回の app-idea-hunt 実行後、vercel.com で prd-vault を
   import し Root Directory を `showcase` に設定（プロジェクト名は推測されにくいものに）
 - [ ] 8. 1〜2週様子を見て問題なければ:
-  - [ ] auto-merge 解禁: `touch ~/dev/others/claude-cron/data/factory_automerge_enabled`
+  - [ ] auto-merge 解禁: `touch "$APP_FACTORY_HOME"/data/factory_automerge_enabled`
   - [ ] 旧ジョブの置き換え: `install.sh --migrate`（feature-hunt 一括・アプリ別 audit 3本を無効化）
 
 ## 4. 恒常的に残る人力作業（週30分想定）
@@ -86,19 +105,19 @@ PRD レビュー（PR 1本: ジョブ分析・KPI・モック/トンマナ）→
 - **トークン消費の台帳**: 方針決定済み・未実装（cron ランナー共通ラッパーで `claude -p --output-format json`
   の usage を `logs/token_ledger.tsv` に記録 → portfolio-review が週報でアプリ別 ROI 集計）
 - **旧 cron スクリプトのリポジトリ取り込み**: run_app_idea_hunt.sh / run_prd_approval_check.sh /
-  run_daily_report.sh 等はまだ claude-cron にしか実体がない（version 管理外）。cron/ に取り込んで
-  install.sh 配備方式に統一する
+  run_daily_report.sh 等はまだジョブ実行環境（`$APP_FACTORY_HOME`。作者環境）にしか実体がない
+  （version 管理外）。cron/ に取り込んで install.sh 配備方式に統一する
 - **store-release の実運用検証**: まだ1本も流していない。最初の1本は人間併走で ASC API の落とし穴を潰す
 - **prd-vault の PRD テンプレート更新**: スキルは references/prd-sections.md で自給できるが、
   テンプレート本体への反映は初回実行時に1回だけ提案される
-- **既存の日次分析スキル群との整理**: claude-cron には `daily-app-report`（毎日10:30、ストアCVR +
+- **既存の日次分析スキル群との整理**: ジョブ実行環境（`$APP_FACTORY_HOME`。作者環境）には `daily-app-report`（毎日10:30、ストアCVR +
   オンボーディングファネル + DAU/MAU を Slack 投稿）とその部品 `app-store-analytics` /
   `firebase-bigquery` が既にある。portfolio-review はこの部品2つを週次で再利用する設計。
   daily-app-report（日次・現状把握用）と週報（週次・意思決定用）は役割が違うので当面併存でよいが、
   対象アプリが増えたら daily 側も portfolio.yml 連動に寄せる
 - **統合ダッシュボード構想（別リポジトリ・private）**: 収益（RevenueCat + AdMob）・アナリティクス
   （DAU/ファネル）・トークン消費（token_ledger）を1画面で見る Web ダッシュボード。
-  データは既に集まる場所が決まっている（portfolio.yml = prd-vault、token_ledger.tsv = claude-cron、
-  dispatch 履歴 = claude-cron）ので、実装は「週次ジョブが JSON スナップショットをダッシュボード
+  データは既に集まる場所が決まっている（portfolio.yml = prd-vault、token_ledger.tsv と
+  dispatch 履歴 = ジョブ実行環境 `$APP_FACTORY_HOME`）ので、実装は「週次ジョブが JSON スナップショットをダッシュボード
   リポジトリにコミット → Next.js が静的に描画 → Vercel（アクセス保護付き）」が最小構成。
   週報（Slack・プッシュ型）とダッシュボード（プル型・時系列）の関係は補完

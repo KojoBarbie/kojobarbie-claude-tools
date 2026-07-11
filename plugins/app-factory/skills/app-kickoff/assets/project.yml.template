@@ -1,6 +1,6 @@
 name: __APP_NAME__
 options:
-  bundleIdPrefix: com.kojobarbie
+  bundleIdPrefix: __BUNDLE_PREFIX__
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
@@ -17,7 +17,7 @@ targets:
       - __APP_NAME__
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.kojobarbie.__BUNDLE_SLUG__
+        PRODUCT_BUNDLE_IDENTIFIER: __BUNDLE_PREFIX__.__BUNDLE_SLUG__
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
@@ -34,5 +34,5 @@ targets:
       - target: __APP_NAME__
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.kojobarbie.__BUNDLE_SLUG__Tests
+        PRODUCT_BUNDLE_IDENTIFIER: __BUNDLE_PREFIX__.__BUNDLE_SLUG__Tests
         GENERATE_INFOPLIST_FILE: YES

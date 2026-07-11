@@ -79,8 +79,9 @@ GitHub issue から PR・セルフレビューまでの開発ワークフロー�
 | **growth-advisor** | growing アプリへコード探索＋ジョブ分析＋KPI 実績から多軸グロース提案（機能/収益化/ASO/リテンション）。出力は feature-hunt と同じ承認フローに流れる。 |
 
 - **セットアップ・必要なもの・残る人力作業の一覧**: [docs/setup-runbook.md](docs/setup-runbook.md)
+- 環境設定（パス・GitHub owner・Bundle ID プレフィックス等）は `~/.config/app-factory/config.env`（`cron/install.sh` が生成。デフォルトは作者環境の値）
 - 定期実行（launchd）の導入・移行は `plugins/app-factory/cron/`（深夜帯中心のスケジュール。README に移行手順）
-- ⚠️ このリポジトリは**パブリック**。スキルに Slack webhook の実 URL・API キー等のシークレットを書かないこと（参照は環境変数名のみ。実値は claude-cron の `.env`）
+- ⚠️ このリポジトリは**パブリック**。スキルに Slack webhook の実 URL・API キー等のシークレットを書かないこと（参照は環境変数名のみ。実値はジョブ実行環境（`$APP_FACTORY_HOME`）の `.env`）
 
 ### 前提
 

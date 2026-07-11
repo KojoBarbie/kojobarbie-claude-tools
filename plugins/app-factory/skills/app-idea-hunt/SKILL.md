@@ -11,18 +11,20 @@ description: "海外アプリ市場から日本向け個人開発iOSアプリの
 
 ## 前提
 
+**最初に `~/.config/app-factory/config.env` を読み込む**（`[ -f ~/.config/app-factory/config.env ] && . ~/.config/app-factory/config.env`。無ければ各変数は括弧内のデフォルト値を使う）。
+
 | リソース | パス |
 |---|---|
-| PRDリポジトリ | `~/dev/prd-vault`（GitHub: `KojoBarbie/prd-vault`、デフォルトブランチ `main`） |
-| 設定 | `prd-vault/config.yml` — 本数・スコア重み・注目カテゴリ・除外条件。**毎回最初に読む** |
-| PRDテンプレート | `prd-vault/templates/PRD_TEMPLATE.md` |
-| Slack webhook | `SLACK_WEBHOOK_URL_PRD`（`~/dev/others/claude-cron/.env` を `set -a && source && set +a` で読み込む） |
-| Slack投稿スクリプト | `python3 ~/dev/others/claude-cron/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"` |
+| PRDリポジトリ | `$PRD_VAULT_DIR`（デフォルト: `~/dev/prd-vault`。GitHub: `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、デフォルトブランチ `main`） |
+| 設定 | prd-vault 内の `config.yml` — 本数・スコア重み・注目カテゴリ・除外条件。**毎回最初に読む** |
+| PRDテンプレート | prd-vault 内の `templates/PRD_TEMPLATE.md` |
+| Slack webhook | `SLACK_WEBHOOK_URL_PRD`（`$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/others/claude-cron/.env`）を `set -a && source && set +a` で読み込む） |
+| Slack投稿スクリプト | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
 | 競合チェック | `bash {skill_dir}/scripts/jp_appstore_search.sh "検索語" [limit] [country]` |
 
 ## Step 0: 準備
 
-1. `cd ~/dev/prd-vault && git checkout main && git pull`
+1. `cd "$PRD_VAULT_DIR" && git checkout main && git pull`
 2. `config.yml` を読み、本数・重み・注目カテゴリ・除外条件を把握する
 3. **重複回避リスト**を作る: `prd/` `ideas/` `rejected/` の全ファイル名と各ファイル冒頭の概要、および `gh pr list --state all --limit 50` のPRタイトルを確認。過去に提案・却下したものと同じネタを再提案しない（`rejected/` は却下理由も読む — ユーザーの好みの学習データとして最重要）
 
@@ -34,7 +36,7 @@ description: "海外アプリ市場から日本向け個人開発iOSアプリの
 
 集める情報: アプリ名 / 国・ソース / カテゴリ / 何が受けているか / 収益モデル / 規模感。
 
-`~/dev/others/claude-cron` 内で実行されている場合は `/overseas-app-trends` スキル（Apptopia・Google Trends等の取得手順）も活用できる。
+`$APP_FACTORY_HOME` 内で実行されている場合は `/overseas-app-trends` スキル（Apptopia・Google Trends等の取得手順）も活用できる（作者環境にあるスキルの前提。無い環境ではスキップしてよい）。
 
 ## Step 2: 除外フィルタ
 

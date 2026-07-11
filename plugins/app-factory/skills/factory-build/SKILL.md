@@ -10,6 +10,10 @@ description: >
 
 # factory-build — issue の自律実装ループ
 
+## 前提
+
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/others/claude-cron`、`PRD_VAULT_DIR=~/dev/prd-vault`）。
+
 `ship-issue` スキルの弟分。ship-issue が「人が計画を承認して1件やる」のに対し、
 factory-build は「**どの issue をやるかの選定から auto-merge まで無人**」で最大2件回す。
 実装・レビューの中身は ship-issue の手順を踏襲するが、**プランモードには一切入らない**
@@ -18,7 +22,7 @@ factory-build は「**どの issue をやるかの選定から auto-merge まで
 ## 安全レール（先に全部書く）
 
 1. **1回の実行で最大2 issue**。それ以上は次回（1日2回動く）に回す
-2. **auto-merge は段階導入スイッチが ON のときだけ**: `~/dev/others/claude-cron/data/factory_automerge_enabled`
+2. **auto-merge は段階導入スイッチが ON のときだけ**: `$APP_FACTORY_HOME/data/factory_automerge_enabled`
    というファイルが存在する場合のみ auto-merge を試みる（無ければ条件を満たしても PR を残して人間へ。
    ロールアウト初期はスイッチ OFF で1〜2週様子を見る運用）。ON でも以下を全て満たすときだけ:
    - ローカルの全テストが green
@@ -39,13 +43,20 @@ factory-build は「**どの issue をやるかの選定から auto-merge まで
 
 ## ステップ 0: 対象の把握
 
-1. `~/dev/prd-vault/portfolio.yml` を読む（無ければ「portfolio-review を先に実行してください」と
+1. `$PRD_VAULT_DIR/portfolio.yml` を読む（無ければ「portfolio-review を先に実行してください」と
    ログ・Slack に残して終了）
 2. アプリを **stage 優先度順**に並べる: `building` → `growing` → `validating` → それ以外は対象外
 3. 前回の残り物を先に処理する: 各対象リポジトリで自分が過去に作った open PR
    （head ブランチが `factory/` プレフィックス）を確認し、
    **CI が完了していて auto-merge 条件を満たすものがあれば先にマージする**
    （前回「CI 待ちで持ち越し」たものの回収。これは本日の2件にカウントしない）
+4. **人間からの修正指示（PR コメント）を拾う**: 上記の open PR に、**人間が書いた未解決レビュー
+   コメント**（bot の投稿は `🤖` プレフィックスで判別・除外）があれば、それが修正指示のチャネル。
+   マージ判定より先に **ship-issue のステップ6と同じ1往復**を行う:
+   コメントごとに「修正 → テスト → コミット → 返信」または「対応しない理由を返信」。
+   往復は1回で打ち切り（返信への再反応は次回実行に委ねる — 無限ループ防止）。
+   往復後に auto-merge 条件を再評価する。**人間のコメントが1件でも残っている PR は、
+   全コメント解決（resolved）まで auto-merge しない**（人間の意見が機械条件より優先）
 
 ## ステップ 1: issue の選定（最大2件）
 

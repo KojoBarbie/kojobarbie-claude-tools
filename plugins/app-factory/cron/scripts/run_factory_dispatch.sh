@@ -7,11 +7,13 @@
 
 set -euo pipefail
 
-PROJECT_DIR="$HOME/dev/others/claude-cron"
+CONFIG_FILE="$HOME/.config/app-factory/config.env"
+[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
+PROJECT_DIR="${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}"
 SCHEDULE_FILE="$PROJECT_DIR/data/factory_schedule.tsv"
 HISTORY_FILE="$PROJECT_DIR/logs/factory_dispatch_history.tsv"
 LOG_FILE="$PROJECT_DIR/logs/factory_dispatch.log"
-CLAUDE="$HOME/.nodebrew/current/bin/claude"
+CLAUDE="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"; }
 
@@ -81,7 +83,7 @@ case "$JOB" in
   growth-advisor)
     run_claude "$APP_PATH" "app-factory:growth-advisor スキルを最初から最後まで実行してください。
 
-- prd-vault（~/dev/prd-vault）の portfolio.yml と PRD のジョブ分析・KPI セクションを必ず入力に使うこと
+- prd-vault（\$PRD_VAULT_DIR。~/.config/app-factory/config.env 参照、デフォルト ~/dev/prd-vault）の portfolio.yml と PRD のジョブ分析・KPI セクションを必ず入力に使うこと
 - 提案は最大3件、根拠・前提・検証方法の3点セットを必須とすること"
     ;;
   *)

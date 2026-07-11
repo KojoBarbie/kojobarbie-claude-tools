@@ -23,19 +23,21 @@ App Factory サイクルの意思決定を担う週次スキル。役割は4つ:
 
 ## 前提パス・環境
 
-- prd-vault: `~/dev/prd-vault`（リポジトリ `KojoBarbie/prd-vault`、状態ファイル `portfolio.yml`）
-- claude-cron: `~/dev/others/claude-cron`（`.env`、`data/`、`logs/`、firebase-bigquery / slack-post スキル）
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数は括弧内のデフォルト値を使う）。
+
+- prd-vault: `$PRD_VAULT_DIR`（デフォルト: `~/dev/prd-vault`。リポジトリ `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、状態ファイル `portfolio.yml`）
+- ジョブ実行環境: `$APP_FACTORY_HOME`（デフォルト: `~/dev/others/claude-cron`。`.env`、`data/`、`logs/`。firebase-bigquery / slack-post スキルは作者環境の前提 — 無い環境では該当計測を unmeasured 扱い / curl で直接 POST）
 - `.env` から読む: `SLACK_WEBHOOK_URL_FACTORY`（無ければ `SLACK_WEBHOOK_URL`）、GA/BigQuery 認証、
   `REVENUECAT_API_KEY`（未設定なら収益は未計測扱い）、`APP_STORE_*`（ASC API）
 
 ## ステップ 0: portfolio.yml の読み込み（無ければブートストラップ）
 
-`~/dev/prd-vault/portfolio.yml` を読む。**無ければ初回ブートストラップ**:
+`$PRD_VAULT_DIR/portfolio.yml` を読む。**無ければ初回ブートストラップ**:
 
 1. スキーマは `${CLAUDE_PLUGIN_ROOT}/assets/portfolio.yml.template` に従う
 2. アプリの列挙: prd-vault の `prd/`・`shipped/` の PRD frontmatter（開発リポジトリ URL・キックオフ日）、
-   `~/dev/others/claude-cron/data/feature_hunt_apps.txt`、`~/dev/swift/` `~/dev/flutter/` の
-   git remote が `KojoBarbie/` のリポジトリを突き合わせる
+   `$APP_FACTORY_HOME/data/feature_hunt_apps.txt`、`$APPS_DIR/`（デフォルト: `~/dev/swift`。作者環境では
+   `~/dev/flutter/` も）の git remote が `$GITHUB_OWNER/` のリポジトリを突き合わせる
 3. 初期ステージの推定: MVP issue が open で未リリース → `building`、
    App Store 掲載済み（`asc_cloud.py status` や daily-report の対象）→ リリース日不明なら `validating` とし
    週報で人間に確認を出す。実験・旧作（git 整備が薄い）はポートフォリオに **入れない**
@@ -49,8 +51,8 @@ App Factory サイクルの意思決定を担う週次スキル。役割は4つ:
 
 | 指標 | 取得元 | 条件 |
 |---|---|---|
-| downloads_7d / ストアCVR | ASC API — claude-cron の **app-store-analytics** スキルを再利用 | `asc_app_id` があるもの |
-| dau_avg / activation_rate / d1_retention | **firebase-bigquery** スキル（claude-cron 内） | `analytics_env_prefix` 設定済みのもの |
+| downloads_7d / ストアCVR | ASC API — `$APP_FACTORY_HOME` の **app-store-analytics** スキルを再利用（作者環境の前提。無ければ ASC API を直接叩く） | `asc_app_id` があるもの |
+| dau_avg / activation_rate / d1_retention | **firebase-bigquery** スキル（`$APP_FACTORY_HOME` 内。作者環境の前提 — 無ければ unmeasured 扱い） | `analytics_env_prefix` 設定済みのもの |
 | crash_free | Crashlytics（BigQuery エクスポート） | 同上 |
 | revenue_7d_jpy | **RevenueCat API v2（課金）+ AdMob API（広告）の合算** | それぞれ `revenuecat_project` / `.env` の `ADMOB_*` OAuth 設定済みのもの。片方しか取れない場合は取れた分を計上し、欠けを内訳に明記 |
 
@@ -90,21 +92,21 @@ App Factory サイクルの意思決定を担う週次スキル。役割は4つ:
 ## ステップ 3: portfolio.yml の更新とコミット
 
 - `updated`・各アプリの `metrics`・`kpi`・`stage`・`last_jobs`
-  （`~/dev/others/claude-cron/logs/factory_dispatch_history.tsv` から各ジョブの最終実行日を転記）を更新
+  （`$APP_FACTORY_HOME/logs/factory_dispatch_history.tsv` から各ジョブの最終実行日を転記）を更新
 - prd-vault の main にコミット & push。メッセージ例:
   `🤖 portfolio-review 2026-07-17: Hirune validating→growing (M1/M2達成), 3アプリ計測更新`
 
 ## ステップ 4: 翌週の割当表（factory_schedule.tsv）の生成
 
-`~/dev/others/claude-cron/data/factory_schedule.tsv` を**翌週分で丸ごと書き換える**（TSV は
-dispatcher が bash で読むための形式。列: `日付<TAB>アプリ名<TAB>絶対パス<TAB>ジョブ`）:
+`$APP_FACTORY_HOME/data/factory_schedule.tsv` を**翌週分で丸ごと書き換える**（TSV は
+dispatcher が bash で読むための形式。列: `日付<TAB>アプリ名<TAB>絶対パス<TAB>ジョブ`。
+パスは portfolio.yml の `path` をそのまま使う）。例:
 
 ```
 # App Factory 割当表（portfolio-review が毎週金曜に生成。手編集可）
 # date	app	path	job   （job: audit | feature-hunt | growth-advisor）
-2026-07-20	tomarigi	~/dev/flutter/tomarigi	audit
-2026-07-21	AntiScroll	~/dev/swift/antiscroll	feature-hunt
-2026-07-23	Hirune	~/dev/swift/Hirune	feature-hunt
+2026-07-20	ExampleFlutterApp	~/dev/flutter/ExampleFlutterApp	audit
+2026-07-21	ExampleApp	~/dev/swift/ExampleApp	feature-hunt
 ```
 
 生成ルール:
@@ -118,7 +120,8 @@ dispatcher が bash で読むための形式。列: `日付<TAB>アプリ名<TAB
 
 ## ステップ 5: 週報を Slack に1通
 
-`slack_post.py`（claude-cron の slack-post スキル）で `SLACK_WEBHOOK_URL_FACTORY`
+`slack_post.py`（`$APP_FACTORY_HOME` の slack-post スキル。作者環境の前提 — 無い環境では
+curl で webhook に直接 POST）で `SLACK_WEBHOOK_URL_FACTORY`
 （無ければ `SLACK_WEBHOOK_URL`）へ投稿する。構成（この順で・全部入れる）:
 
 1. **今週の動き**: 生まれた PRD / kickoff されたアプリ / マージされた PR 数 / リリース・提出

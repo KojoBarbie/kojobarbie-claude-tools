@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """App Store Connect API — Bundle ID登録とXcode Cloudワークフロー作成.
 
-環境変数（~/dev/others/claude-cron/.env を source してから実行）:
+環境変数（$APP_FACTORY_HOME/.env を source してから実行。APP_FACTORY_HOME は
+  ~/.config/app-factory/config.env で定義、デフォルト ~/dev/others/claude-cron）:
   APP_STORE_KEY_ID      — API Key ID
   APP_STORE_ISSUER_ID   — Issuer ID
   APP_STORE_P8_KEY      — .p8 秘密鍵の内容（改行含む文字列）
@@ -14,8 +15,8 @@
   create-workflows <AppName> [--scheme S] [--project P.xcodeproj]
                                            PR/タグトリガーのTestFlightワークフロー2本を作成
 
-依存: pyjwt, cryptography, requests（claude-cron の .venv に導入済み。
-  ~/dev/others/claude-cron/.venv/bin/python3 での実行を推奨）
+依存: pyjwt, cryptography, requests（作者環境ではジョブ実行環境の .venv に導入済み。
+  $APP_FACTORY_HOME/.venv/bin/python3 での実行を推奨。無い環境では venv を作って導入する）
 """
 
 import argparse

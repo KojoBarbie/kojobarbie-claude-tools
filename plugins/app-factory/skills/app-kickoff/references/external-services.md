@@ -2,7 +2,7 @@
 
 方針: **API・CLI で自動化できるものは kickoff がその場でやり、できないものは「迷わず実行できる
 粒度のチェックリスト」として Slack に送る**。すべて冪等（既存があれば作らずスキップ）。
-シークレット実値はこのリポジトリに書かず、`~/dev/others/claude-cron/.env` を参照する。
+シークレット実値はこのリポジトリに書かず、`$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/others/claude-cron/.env`。`~/.config/app-factory/config.env` 参照）を参照する。
 
 ## 命名規約（先に決めておくと URL が予告できる）
 
@@ -18,7 +18,7 @@
 
 ```bash
 firebase projects:create {slug}-app --display-name "{AppName}"
-firebase apps:create ios "{AppName}" --bundle-id com.kojobarbie.{slug} --project {slug}-app
+firebase apps:create ios "{AppName}" --bundle-id "${BUNDLE_ID_PREFIX}.{slug}" --project {slug}-app
 # 出力された App ID で設定ファイルを取得し、Xcode ターゲット直下に配置
 firebase apps:sdkconfig ios <APP_ID> --project {slug}-app > {AppName}/GoogleService-Info.plist
 ```
@@ -38,7 +38,7 @@ curl -s -X POST https://api.revenuecat.com/v2/projects \
   -d '{"name": "{AppName}"}'
 curl -s -X POST https://api.revenuecat.com/v2/projects/<PROJECT_ID>/apps \
   -H "Authorization: Bearer $REVENUECAT_API_KEY" -H "Content-Type: application/json" \
-  -d '{"name": "{AppName}", "type": "app_store", "bundle_id": "com.kojobarbie.{slug}"}'
+  -d "{\"name\": \"{AppName}\", \"type\": \"app_store\", \"bundle_id\": \"${BUNDLE_ID_PREFIX}.{slug}\"}"
 ```
 
 - 作成できたら public API key を取得し、**ペイウォール issue の本文に記載**（public key は公開可能な値。
@@ -64,7 +64,7 @@ AdMob API はレポート専用でアプリ登録はできない。チェック�
 ## Vercel（LP の公開）— CLI で自動化を試みる
 
 ```bash
-cd ~/dev/swift/{AppName}/lp
+cd "$APPS_DIR"/{AppName}/lp
 vercel link --yes --project {slug}-lp && vercel git connect   # 認証済みなら通る
 vercel deploy --prod --yes                                     # 初回デプロイ
 ```

@@ -4,7 +4,7 @@
 
 1. `<アプリ>/.claude/feature-hunt.yml`（設定）
 2. `<アプリ>/.claude/product-context.md`（製品コンテキスト）
-3. `~/dev/others/claude-cron/feature_hunt_apps.txt` への1行追記（週次実行への登録）
+3. `$APP_FACTORY_HOME/feature_hunt_apps.txt`（`~/.config/app-factory/config.env` で定義。デフォルト: `~/dev/others/claude-cron`）への1行追記（週次実行への登録）
 
 ## 手順
 
@@ -55,10 +55,10 @@ country: jp
 competitors:           # 3〜5個
   - id:
     name:
-analytics_env_prefix:  # claude-cron/.env の変数プレフィックス。未接続なら null
+analytics_env_prefix:  # $APP_FACTORY_HOME/.env の変数プレフィックス。未接続なら null
 ```
 
-`analytics_env_prefix` は `~/dev/others/claude-cron/.env` に `<APP名>_GCP_PROJECT_ID` が存在する場合のみ設定する（例: AntiScroll → `ANTISCROLL`）。無ければ null にして、Firebase導入済みアプリならオンボーディング報告に「BigQuery連携すればAnalytics情報源が使える」と添える。
+`analytics_env_prefix` は `$APP_FACTORY_HOME/.env` に `<APP名>_GCP_PROJECT_ID` が存在する場合のみ設定する（例: AntiScroll → `ANTISCROLL`）。無ければ null にして、Firebase導入済みアプリならオンボーディング報告に「BigQuery連携すればAnalytics情報源が使える」と添える。
 
 ### 6. ラベルを作る
 
@@ -71,7 +71,7 @@ gh label create go --color "FBCA04" --description "この提案を承認する" 
 ### 7. コミットして登録する
 
 - `.claude/feature-hunt.yml` `.claude/product-context.md` をデフォルトブランチにコミット・プッシュ
-- `~/dev/others/claude-cron/feature_hunt_apps.txt` に `アプリ名<TAB>絶対パス` を1行追記
+- `$APP_FACTORY_HOME/feature_hunt_apps.txt` に `アプリ名<TAB>絶対パス` を1行追記
 
 ### 8. 報告
 
