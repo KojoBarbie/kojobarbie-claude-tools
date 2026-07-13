@@ -93,7 +93,7 @@ feature-hunt → ship-issue → quality-release-cycle）に、欠けていた輪
 
 「文章の PRD だけでは Go 判断がしづらい」を解消するため、app-idea-hunt は PRD と同時に
 **モック**（コア画面の見た目）と**トンマナ**（配色・タイポ・ムード）を作り、
-prd-vault 内の **showcase サイト**（`showcase/`、Next.js → Vercel デプロイ）に集約する:
+prd-vault 内の **showcase サイト**（`showcase/`、Next.js 静的エクスポート → Firebase Hosting）に集約する:
 
 - アプリごとに2ページ: `/apps/<slug>/tone`（パレット・タイポグラフィ・Do/Don't。ダークモード
   禁止の規約を反映）と `/apps/<slug>/mock`（iPhone フレーム内のコア画面1〜2枚。トンマナ準拠）
@@ -101,7 +101,7 @@ prd-vault 内の **showcase サイト**（`showcase/`、Next.js → Vercel デ�
   まとめてレビュー**できる。Slack 通知に showcase の URL を添える
 - 一覧ページ（`/`）が全アプリのモック/トンマナ/ステータスのカタログになる
 - app-kickoff のデザインコンセプトシートは tone ページを正として引き継ぐ
-- 初回のみ人間が Vercel に prd-vault を接続する（Root Directory=showcase。1回だけ）
+- 初回のみ人間が prd-vault 専用の Firebase プロジェクトを作り showcase を Hosting へデプロイする（1回だけ）
 
 ## 2. ステージモデル（アプリのライフサイクル）
 
@@ -315,8 +315,8 @@ quality-release-cycle は dev-workflow-tools から移動）。強化はスキ�
   **必須 issue セット**（オンボーディング=実装時に onboarding-advisor 起動・ペイウォール=RevenueCat・
   設定画面=問い合わせ/利用規約/プライバシーポリシーの3項目）/
   **外部サービス一気通貫**（Firebase・RevenueCat は自動作成、AdMob は API 非対応のため人力5分）/
-  **LP 生成**（`lp/` に React プロジェクト + app-ads.txt + 規約ページ → Vercel の `{slug}-lp` へ接続。
-  設定画面とストア提出のプライバシー URL はここを指す）
+  **LP 生成**（`lp/` に React プロジェクト + app-ads.txt + 規約ページ → アプリの Firebase プロジェクト内の
+  `{slug}-lp` Hosting サイト（`https://{slug}-lp.web.app`）へ公開。設定画面とストア提出のプライバシー URL はここを指す）
 
 ⚠️ **このリポジトリはパブリック**。スキル・cron テンプレートにシークレット
 （webhook 実 URL・API キー・トークン）を書かない。参照は環境変数名のみ、実値はジョブ実行環境の
@@ -328,7 +328,7 @@ quality-release-cycle は dev-workflow-tools から移動）。強化はスキ�
   .env・logs・data・launchd 実体。`cron/install.sh` が配備し、移行手順は `cron/README.md`
   （ホームスキルの削除・run_prd_approval_check.sh の asc_cloud.py パス修正を含む）
 - `prd-vault`（private）: PRD・portfolio.yml（portfolio-review が自動生成）・
-  showcase サイト（app-idea-hunt が自動ブートストラップ。Vercel 接続のみ人間が1回）
+  showcase サイト（app-idea-hunt が自動ブートストラップ。Firebase Hosting 接続のみ人間が1回）
 
 ## 10. コストと安全性の考慮
 

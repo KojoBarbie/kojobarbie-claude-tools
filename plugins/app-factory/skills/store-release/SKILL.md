@@ -98,7 +98,7 @@ gh issue list --repo "$GITHUB_OWNER"/<repo> --label release-train --state open \
 文字数制限は生成後に必ず数えて確認する（超過は ASC API が 409 を返す）。既にファイルがあれば再生成しない（冪等）。
 
 **プライバシーポリシー URL・サポート URL** は kickoff が生成した LP を使う:
-`https://{slug}-lp.vercel.app/privacy` と `https://{slug}-lp.vercel.app`。提出前に 200 を返すことを
+`https://{slug}-lp.web.app/privacy` と `https://{slug}-lp.web.app`。提出前に 200 を返すことを
 確認し、LP が未デプロイなら release-train issue にタスクとして追記して提出条件に含める。
 
 スクリーンショットは `docs/store-assets/` にあるものを使う。**無ければ**:

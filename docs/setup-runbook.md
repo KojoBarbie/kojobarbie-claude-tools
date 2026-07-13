@@ -32,8 +32,7 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 | Claude Code CLI | 全ジョブの実行本体（launchd が `$CLAUDE_BIN` を参照） | `claude --version` |
 | Xcode + XcodeGen | app-kickoff のプロジェクト生成・ビルド確認 | `xcodegen --version` |
 | Node.js | showcase（Next.js）・LP（Vite）のビルド | `node --version` |
-| Firebase CLI（`firebase login` 済み） | kickoff の Firebase プロジェクト自動作成 | `firebase projects:list` |
-| Vercel CLI（認証済み） | kickoff の LP 自動接続・デプロイ | `vercel whoami` |
+| Firebase CLI（`firebase login` 済み） | kickoff の Firebase プロジェクト作成 + LP / showcase の Hosting デプロイ | `firebase projects:list` |
 | ジョブ実行環境の `.venv`（pyjwt / cryptography / requests） | ASC API（asc_cloud.py） | `$APP_FACTORY_HOME/.venv/bin/python3 -c "import jwt"` |
 | `fvm`（Flutter アプリを対象にする場合のみ） | Flutter 系の監査・テスト | `fvm --version` |
 
@@ -57,7 +56,7 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 
 ## 3. 初回セットアップ チェックリスト（1回だけ）
 
-上から順に。所要 30分程度（Vercel 接続含む）。
+上から順に。所要 30分程度（showcase の Firebase Hosting 接続含む）。
 
 - [ ] 1. プラグイン更新: `/plugin marketplace update kojobarbie-tools` → `/plugin install app-factory@kojobarbie-tools`
 - [ ] 2. **ホームスキルの削除**（プラグイン版と重複すると自動トリガーが競合する）:
@@ -68,8 +67,9 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 - [ ] 5. 定期実行の配備: `plugins/app-factory/cron/install.sh`（まず `--dry-run` で確認推奨）
 - [ ] 6. **portfolio-review を1回対話実行**して portfolio.yml のブートストラップ内容
   （アプリ一覧・ステージ推定）を確認: `cd "$APP_FACTORY_HOME" && claude "app-factory:portfolio-review を実行して"`
-- [ ] 7. **showcase の Vercel 接続**: 初回の app-idea-hunt 実行後、vercel.com で prd-vault を
-  import し Root Directory を `showcase` に設定（プロジェクト名は推測されにくいものに）
+- [ ] 7. **showcase の Firebase Hosting 接続**: 初回の app-idea-hunt 実行後、prd-vault 専用の
+  Firebase プロジェクトを作成（`firebase projects:create pv-showcase-{ランダム}`）し
+  `cd showcase && npm run build && firebase deploy --only hosting`（プロジェクト ID を推測されにくく）
 - [ ] 8. 1〜2週様子を見て問題なければ:
   - [ ] auto-merge 解禁: `touch "$APP_FACTORY_HOME"/data/factory_automerge_enabled`
   - [ ] 旧ジョブの置き換え: `install.sh --migrate`（feature-hunt 一括・アプリ別 audit 3本を無効化）
@@ -82,7 +82,7 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 |---|---|---|
 | 月〜（PRD PR が来たら） | prd-vault の PR をマージ / クローズ / コメント。見るのは「ジョブ分析が信じられるか」「KPI に具体的数値と根拠があるか」「showcase のモック/トンマナ」 | 新規アプリが生まれない（既存は回り続ける） |
 | 随時（提案 issue が来たら） | `feature-proposal` に 👍 / `go` または close | 提案が溜まる（6件超で新規提案は自動休止） |
-| キックオフ直後 | **ASC でアプリレコード作成 + Xcode Cloud 初回オンボーディング + AdMob アプリ追加（計10分）**。Firebase / RevenueCat / Vercel は自動（失敗時のみフォールバック手順が Slack に届く） | そのアプリのリリース・広告収益化が進まない（3日ごとにリマインド） |
+| キックオフ直後 | **ASC でアプリレコード作成 + Xcode Cloud 初回オンボーディング + AdMob アプリ追加（計10分）**。Firebase / RevenueCat / LP の Firebase Hosting は自動（失敗時のみフォールバック手順が Slack に届く） | そのアプリのリリース・広告収益化が進まない（3日ごとにリマインド） |
 | リリース前（1回/アプリ） | スクリーンショットを `docs/store-assets/` に置く | 提出が保留される（Slack で1回だけ依頼が来る） |
 | アプリ初回提出時（1回/アプリ） | store-release が提出直前で止まるので、ASC で内容確認して提出（or「提出して」と指示） | 提出されないまま待機 |
 | 水〜木（列車発車の通知が来たら・任意） | 24時間以内に veto するなら release-train issue に `hold` or close | **提出される**（それが既定の意図） |
@@ -119,5 +119,5 @@ PRD レビュー（PR 1本: ジョブ分析・KPI・モック/トンマナ）→
   （DAU/ファネル）・トークン消費（token_ledger）を1画面で見る Web ダッシュボード。
   データは既に集まる場所が決まっている（portfolio.yml = prd-vault、token_ledger.tsv と
   dispatch 履歴 = ジョブ実行環境 `$APP_FACTORY_HOME`）ので、実装は「週次ジョブが JSON スナップショットをダッシュボード
-  リポジトリにコミット → Next.js が静的に描画 → Vercel（アクセス保護付き）」が最小構成。
+  リポジトリにコミット → Next.js 静的エクスポート → Firebase Hosting（Firebase Auth でアクセス保護）」が最小構成。
   週報（Slack・プッシュ型）とダッシュボード（プル型・時系列）の関係は補完

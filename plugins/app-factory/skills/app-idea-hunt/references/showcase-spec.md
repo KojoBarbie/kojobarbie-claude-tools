@@ -1,18 +1,20 @@
 # showcase サイト仕様（prd-vault/showcase）
 
-アイデア段階のトンマナ＋モックを1か所で確認するための静的サイト。prd-vault リポジトリの `showcase/` に置き、Vercel（Root Directory=`showcase`）でデプロイする。
+アイデア段階のトンマナ＋モックを1か所で確認するための静的サイト。prd-vault リポジトリの `showcase/` に置き、**Firebase Hosting** でデプロイする（Vercel は使わない — 無料枠が商用利用不可のため）。
 
-- Next.js App Router。全ページ静的（Server Component のみ、ビルド時に JSON を読む）。API 呼び出し・シークレットなし
+- Next.js App Router を **静的エクスポート**（`next.config.mjs` に `output: 'export'`）。全ページ静的（Server Component のみ、ビルド時に JSON を読む）。API 呼び出し・シークレットなし。`next build` で `out/` が生成される
 - **ダークモード禁止**（アプリ全体の規約）。全ページ明るい背景
-- Note: prd-vault は private リポジトリなので showcase に何を置いてもよいが、Vercel の公開 URL は誰でも開けるため、**推測されにくいプロジェクト名**（ランダムなサフィックス付き等）を使う
+- Note: prd-vault は private リポジトリなので showcase に何を置いてもよいが、Firebase Hosting の公開 URL（`https://{サイト名}.web.app`）は誰でも開けるため、**推測されにくいサイト名**（ランダムなサフィックス付き等）を使う
 
 ## ディレクトリ構成
 
 ```
 showcase/
 ├── package.json
+├── next.config.mjs      # output: 'export'（静的エクスポート）
+├── firebase.json        # Firebase Hosting 設定（public: "out"）
 ├── tsconfig.json        # 初回 next build が自動生成したものをコミット
-├── .gitignore           # node_modules / .next
+├── .gitignore           # node_modules / .next / out
 ├── apps.json            # アプリ一覧（下記スキーマ）
 └── app/
     ├── layout.tsx       # 共通レイアウト（明るい背景・システムフォント・簡素なヘッダー）
@@ -75,14 +77,30 @@ showcase/
    ```
 
 2. `showcase/apps.json` — `[]` で作る
-3. `showcase/app/layout.tsx` — html/body と最小のインラインスタイル（明るい背景・システムフォント）、サイト名ヘッダー
-4. `showcase/app/page.tsx` — apps.json を import して一覧表示
-5. `showcase/.gitignore` — `node_modules` と `.next`
-6. `cd showcase && npm install && npx next build` が通ることを確認する（tsconfig.json / next-env.d.ts が自動生成されるので tsconfig.json はコミットする）
-7. **Vercel 接続は1回だけ人間の作業**。Slack にチェックリストで依頼する:
-   - [ ] vercel.com で `prd-vault` リポジトリを import
-   - [ ] Root Directory を `showcase` に設定
-   - [ ] プロジェクト名は推測されにくいものにする（公開 URL になるため）
+3. `showcase/next.config.mjs` — 静的エクスポート設定:
+
+   ```js
+   /** @type {import('next').NextConfig} */
+   const nextConfig = { output: 'export', images: { unoptimized: true } };
+   export default nextConfig;
+   ```
+
+4. `showcase/firebase.json` — Firebase Hosting は `out/`（エクスポート先）を配信:
+
+   ```json
+   { "hosting": { "public": "out", "ignore": ["firebase.json", "**/.*", "**/node_modules/**"] } }
+   ```
+
+5. `showcase/app/layout.tsx` — html/body と最小のインラインスタイル（明るい背景・システムフォント）、サイト名ヘッダー
+6. `showcase/app/page.tsx` — apps.json を import して一覧表示
+7. `showcase/.gitignore` — `node_modules` / `.next` / `out`
+8. `cd showcase && npm install && npx next build` が通り、`out/` が生成されることを確認する（tsconfig.json / next-env.d.ts が自動生成されるので tsconfig.json はコミットする）
+9. **Firebase Hosting の接続は1回だけ人間の作業**。Slack にチェックリストで依頼する。
+   複数サイト管理を避けるため、**prd-vault 専用の Firebase プロジェクトを1つ作り、その
+   デフォルト Hosting サイトを使う**（プロジェクト ID 自体を推測されにくくすれば公開 URL も隠れる）:
+   - [ ] `firebase projects:create pv-showcase-{ランダム}`（例: `pv-showcase-a1b2c3`。→ 公開 URL は `https://pv-showcase-a1b2c3.web.app`）
+   - [ ] `cd showcase && npm run build && firebase deploy --only hosting --project pv-showcase-{ランダム}`
+   - [ ] 確定した `https://pv-showcase-{ランダム}.web.app` を控える（以後の app-idea-hunt 通知が参照する）
 
 ## 運用ルール
 
