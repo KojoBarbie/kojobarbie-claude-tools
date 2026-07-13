@@ -86,7 +86,7 @@ xcodebuild -project {AppName}.xcodeproj -scheme {AppName} \
 
 AdMob の app-ads.txt 配信と、設定画面・ストア提出が参照する利用規約/プライバシーポリシーの
 置き場所として、**LP をアプリリポジトリの `lp/` に React プロジェクト（Vite + React + TS の SPA）で生成する**。
-命名・URL 規約と Vercel 接続は `${CLAUDE_PLUGIN_ROOT}/skills/app-kickoff/references/external-services.md` に従う:
+命名・URL 規約と Firebase Hosting での LP 公開は `${CLAUDE_PLUGIN_ROOT}/skills/app-kickoff/references/external-services.md` に従う:
 
 - `/`: LP 本体（アプリ名・タグライン・特徴3つ・主要画面のモック画像・DL バッジ枠（リリース後に差し替え）・
   フッターに問い合わせ mailto / 利用規約 / プライバシーポリシー）。トンマナは showcase の tone ページ
@@ -95,7 +95,8 @@ AdMob の app-ads.txt 配信と、設定画面・ストア提出が参照する�
   反映して生成。個人開発者名義・準拠法（日本法）・改定日を含む
 - `lp/public/app-ads.txt`: `.env` の `ADMOB_PUBLISHER_ID` から生成（`google.com, {ID}, DIRECT, f08c47fec0942fa0`）
 - 問い合わせ先は `.env` の `SUPPORT_EMAIL`（未設定ならチェックリストに追記依頼を入れ、プレースホルダーで生成）
-- SPA の直 URL（/terms 等）が 404 にならないよう `lp/vercel.json` に rewrites を置く
+- SPA の直 URL（/terms 等）が 404 にならないよう、**リポジトリルートの `firebase.json`** に hosting
+  ターゲット `lp`（`public: "lp/dist"` + SPA rewrites）を置く（Vercel は使わない。詳細は external-services.md）
 - `npm run build` が通ることを確認してからコミットに含める
 
 ## Step 6: GitHubリポジトリ作成とpush
@@ -132,18 +133,18 @@ PRDのコア機能を分解し、下記の**必須issueセット**と合わせ�
    （Step 8 で作成済みならコメントに記載）を設定1箇所に集約 / `paywall_viewed` 等の計測イベント連携 /
    サンドボックスでの購入・リストアのテスト手順をチェックリスト化
 4. **設定画面**: どのアプリでも必ず設定画面（または設定タブ）を作り、**最低限この3項目を必ず入れる**:
-   問い合わせ（`mailto:` — `.env` の `SUPPORT_EMAIL`）/ 利用規約（`https://{slug}-lp.vercel.app/terms`）/
-   プライバシーポリシー（`https://{slug}-lp.vercel.app/privacy`）。加えてアプリバージョン表示。
+   問い合わせ（`mailto:` — `.env` の `SUPPORT_EMAIL`）/ 利用規約（`https://{slug}-lp.web.app/terms`）/
+   プライバシーポリシー（`https://{slug}-lp.web.app/privacy`）。加えてアプリバージョン表示。
    リンク先は Step 5.5 の LP に配置済み
 5. **App Store提出準備**（最後）: アイコン・スクショ・審査メタデータ・プライバシー表記
 
 PRDの収益化が広告を含む場合は **広告実装 issue** も追加（AdMob アプリID は Step 8 のチェックリストで
-人間が登録後にコメントされる。受け入れ条件に「`https://{slug}-lp.vercel.app/app-ads.txt` が 200」を含める）。
+人間が登録後にコメントされる。受け入れ条件に「`https://{slug}-lp.web.app/app-ads.txt` が 200」を含める）。
 
-## Step 8: 外部サービス準備（ASC / Firebase / RevenueCat / AdMob / Vercel を一気通貫で）
+## Step 8: 外部サービス準備（ASC / Firebase / RevenueCat / AdMob / LP公開 を一気通貫で）
 
 自動化できる部分はここで全部やり、できない部分は正確なチェックリストに落とす。
-Firebase / RevenueCat / AdMob / Vercel の具体的なコマンド・API・フォールバックは
+Firebase / RevenueCat / AdMob / Firebase Hosting（LP）の具体的なコマンド・API・フォールバックは
 **`${CLAUDE_PLUGIN_ROOT}/skills/app-kickoff/references/external-services.md` に従う**（命名規約もそこで固定）。
 
 1. **Bundle IDの登録（自動）**: `xcode-cloud-setup` スキルのスクリプトで `${BUNDLE_ID_PREFIX}.{slug}` をASCに登録する:
@@ -162,8 +163,10 @@ Firebase / RevenueCat / AdMob / Vercel の具体的なコマンド・API・フ�
 4. **RevenueCat プロジェクト作成と紐付け（自動を試行）**: API v2 でプロジェクト + iOS アプリを作成し、
    public API key をペイウォール issue にコメント、プロジェクト ID を portfolio.yml の
    `revenuecat_project` に記入（API 不可ならチェックリスト行き）
-5. **Vercel へ LP を接続（自動を試行）**: `{slug}-lp` として link → git connect → 初回デプロイ。
-   `https://{slug}-lp.vercel.app/app-ads.txt` の 200 を確認（CLI 未認証ならチェックリスト行き）
+5. **Firebase Hosting へ LP を公開（自動を試行）**: アプリの Firebase プロジェクト内に `{slug}-lp`
+   Hosting サイトを作成 → `lp/dist` をビルドして `firebase deploy --only hosting:lp`。
+   `https://{slug}-lp.web.app/app-ads.txt` の 200 を確認（`.web.app` は取れた実サイト名で読み替え。
+   firebase CLI 未認証ならチェックリスト行き）
 6. **手動ステップ**（Step 11 でチェックリストとしてSlackに送る）:
    - App Store Connectでアプリレコード作成（登録済みBundle IDを選ぶだけ、約2分）
    - Xcodeで一度だけXcode Cloudをオンボーディング（Product > Xcode Cloud、初回ワークフロー作成とGitHub接続）
@@ -206,16 +209,16 @@ grep -o 'https://claude.ai/code/session_[A-Za-z0-9]*' "$RC_LOG" | head -1
 :clipboard: *手動でやること*
 ☐ 1. App Store Connectでアプリを作成（Bundle ID `${BUNDLE_ID_PREFIX}.{slug}` は登録済み・選ぶだけ）
 ☐ 2. Xcodeで {AppName} を開き Product > Xcode Cloud からオンボーディング（GitHub接続込み）
-☐ 3. AdMobで「アプリを追加」→ 広告ユニット作成 → デベロッパーサイトに https://{slug}-lp.vercel.app を登録
+☐ 3. AdMobで「アプリを追加」→ 広告ユニット作成 → デベロッパーサイトに https://{slug}-lp.web.app を登録
      → アプリID (ca-app-pub-…) を広告実装issueにコメント
 
 1と2は完了したら自動検知（毎日9時/21時）され、PR→TestFlightとタグ(v*)→TestFlightの
 ワークフロー2本が自動作成されてSlackに通知が届きます。合言葉は不要です。
 ```
 
-Firebase / RevenueCat / Vercel の自動セットアップに失敗したものがあれば、そのフォールバック手順
+Firebase / RevenueCat / Firebase Hosting（LP）の自動セットアップに失敗したものがあれば、そのフォールバック手順
 （references/external-services.md の該当チェックリスト）もここに追記する。成功したものは
-「✅ Firebase: {slug}-app 作成済み」のように結果だけ1行で報告する。
+「✅ Firebase: {slug}-app 作成済み」「✅ LP: https://{slug}-lp.web.app 公開済み」のように結果だけ1行で報告する。
 
 ## 品質基準
 

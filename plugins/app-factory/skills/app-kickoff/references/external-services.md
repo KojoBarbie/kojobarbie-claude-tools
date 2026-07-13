@@ -1,4 +1,4 @@
-# 外部サービスの一気通貫セットアップ（Firebase / RevenueCat / AdMob / Vercel）
+# 外部サービスの一気通貫セットアップ（Firebase / RevenueCat / AdMob / LP公開）
 
 方針: **API・CLI で自動化できるものは kickoff がその場でやり、できないものは「迷わず実行できる
 粒度のチェックリスト」として Slack に送る**。すべて冪等（既存があれば作らずスキップ）。
@@ -9,8 +9,13 @@
 | もの | 規約 |
 |---|---|
 | Firebase プロジェクト ID | `{slug}-app` |
-| Vercel の LP プロジェクト名 | `{slug}-lp` → URL は `https://{slug}-lp.vercel.app` |
-| 利用規約 / プライバシーポリシー | `https://{slug}-lp.vercel.app/terms` / `/privacy`（設定画面 issue とストア提出が参照） |
+| LP の Hosting サイト（同プロジェクト内） | `{slug}-lp` → URL は `https://{slug}-lp.web.app` |
+| 利用規約 / プライバシーポリシー | `https://{slug}-lp.web.app/terms` / `/privacy`（設定画面 issue とストア提出が参照） |
+
+> LP は **Vercel を使わない**（無料枠が商用利用不可のため）。アプリの Firebase プロジェクト内に
+> `{slug}-lp` という Hosting サイトを追加して公開する。`.web.app` サブドメインはグローバル一意なので、
+> `{slug}-lp` が取れなかった場合はサフィックスを足し、**実際に確定したサイト名（= URL のサブドメイン）を
+> portfolio.yml と後続 issue に必ず反映する**（下の各所の `{slug}-lp` は確定値で読み替える）。
 
 ## Firebase（Analytics / Crashlytics）— CLI で自動化
 
@@ -53,7 +58,7 @@ AdMob API はレポート専用でアプリ登録はできない。チェック�
 ```
 ☐ AdMob コンソールで「アプリを追加」（iOS・ストア未掲載として登録）→ アプリID (ca-app-pub-…~…) を控える
 ☐ PRD の収益化方針に沿って広告ユニットを作成（例: バナー1本）
-☐ アプリ設定 > app-ads.txt の案内に従い、デベロッパーサイトとして https://{slug}-lp.vercel.app を登録
+☐ アプリ設定 > app-ads.txt の案内に従い、デベロッパーサイトとして https://{slug}-lp.web.app を登録
 ☐ 控えたアプリIDを広告実装 issue にコメントで貼る（Info.plist の GADApplicationIdentifier に使う）
 ```
 
@@ -61,14 +66,36 @@ AdMob API はレポート専用でアプリ登録はできない。チェック�
   `google.com, {ADMOB_PUBLISHER_ID}, DIRECT, f08c47fec0942fa0`）。AdMob のクロール反映は最大24時間
 - `ADMOB_PUBLISHER_ID` が `.env` に無い場合は app-ads.txt をプレースホルダーで置き、チェックリストに追記依頼を入れる
 
-## Vercel（LP の公開）— CLI で自動化を試みる
+## Firebase Hosting（LP の公開）— firebase CLI で自動化
+
+LP はアプリの Firebase プロジェクト（`{slug}-app`）内に専用の Hosting サイトを作って公開する。
+Firebase セクションと同じ `firebase login` の認証をそのまま使う（Vercel CLI は不要）。
 
 ```bash
-cd "$APPS_DIR"/{AppName}/lp
-vercel link --yes --project {slug}-lp && vercel git connect   # 認証済みなら通る
-vercel deploy --prod --yes                                     # 初回デプロイ
+cd "$APPS_DIR"/{AppName}
+firebase hosting:sites:create {slug}-lp --project {slug}-app     # → https://{slug}-lp.web.app（グローバル一意。取れなければサフィックス）
+firebase target:apply hosting lp {slug}-lp --project {slug}-app  # .firebaserc に target 記録
+npm --prefix lp run build                                        # lp/dist を生成
+firebase deploy --only hosting:lp --project {slug}-app           # lp/dist を公開
 ```
 
+リポジトリルートの `firebase.json` に hosting ターゲット `lp` を定義する（`lp/firebase.json` ではなくルートに置く）:
+
+```json
+{
+  "hosting": [
+    {
+      "target": "lp",
+      "public": "lp/dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    }
+  ]
+}
+```
+
+- `app-ads.txt` / `terms` / `privacy` は **実ファイルが rewrite より優先**されるので、SPA fallback に食われず 200 で返る
+  （`app-ads.txt` は `lp/public/` に置けばビルドで `lp/dist/` ルートに出る。`/terms` `/privacy` は SPA ルーティング）
 - 失敗しても止めない。手動フォールバックをチェックリストへ:
-  `☐ vercel.com で {AppName} リポジトリを import（プロジェクト名 {slug}-lp・Root Directory=lp）`
-- 接続確認: `https://{slug}-lp.vercel.app/app-ads.txt` が 200 を返すこと（広告実装 issue の受け入れ条件にも入れる）
+  `☐ lp/ で npm run build 後、firebase hosting:sites:create {slug}-lp → firebase target:apply hosting lp {slug}-lp → firebase deploy --only hosting:lp`
+- 接続確認: `https://{slug}-lp.web.app/app-ads.txt` が 200 を返すこと（広告実装 issue の受け入れ条件にも入れる）
