@@ -30,6 +30,7 @@ set -a && source "${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}/.env" && set
 | `register-bundle-id <identifier> <name>` | Bundle ID登録（例: `register-bundle-id "${BUNDLE_ID_PREFIX}.hirune" Hirune`）。登録済みなら成功扱い |
 | `status [AppName]` | ciProducts・接続済みリポジトリ・既存ワークフローの一覧（オンボーディング状態の確認に使う） |
 | `create-workflows <AppName>` | TestFlightワークフロー2本を作成（下記） |
+| `setup-beta-group <bundle_id> [--group-name developer] [--testers a@b,c@d]` | 内部TestFlightグループを用意（無ければ作成・`hasAccessToAllBuilds=true`＝全ビルド自動配信ON）し、既存ASCユーザーをテスター追加。冪等 |
 
 ## create-workflows が作る2本
 

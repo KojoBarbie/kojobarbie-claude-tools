@@ -265,6 +265,69 @@ def create_workflows(app_name: str, scheme: str | None, project: str | None, bra
         print(f"OK: '{name}' を作成しました（id={created['data']['id']}）")
 
 
+def find_app_by_bundle_id(bundle_id: str):
+    apps = get_all("/v1/apps", f"filter[bundleId]={bundle_id}")
+    return apps[0] if apps else None
+
+
+def setup_beta_group(bundle_id: str, group_name: str, emails: list) -> None:
+    """内部TestFlightグループを用意し（無ければ作成・全ビルド自動配信ON）、既存ASCユーザーを
+    テスターに追加する。冪等。ワークフロー側の変更は不要 — INTERNAL_ONLY のビルドは
+    hasAccessToAllBuilds=true の内部グループに自動配信されるため、配信先の指定はいらない。"""
+    app = find_app_by_bundle_id(bundle_id)
+    if not app:
+        raise SystemExit(
+            f"ERROR: bundleId '{bundle_id}' のアプリが App Store Connect に見つかりません。"
+            "先にアプリレコードを作成してください（Bundle ID 登録だけでは不十分）。"
+        )
+    app_id = app["id"]
+    groups = get_all(f"/v1/apps/{app_id}/betaGroups")
+    grp = next(
+        (g for g in groups
+         if g["attributes"].get("isInternalGroup") and g["attributes"].get("name") == group_name),
+        None,
+    )
+    if grp:
+        gid = grp["id"]
+        print(f"OK: 内部グループ '{group_name}' は既に存在（id={gid}）")
+        if not grp["attributes"].get("hasAccessToAllBuilds"):
+            api("PATCH", f"/v1/betaGroups/{gid}",
+                {"data": {"type": "betaGroups", "id": gid,
+                          "attributes": {"hasAccessToAllBuilds": True}}})
+            print("  → 全ビルド自動配信を ON にしました")
+    else:
+        body = {"data": {"type": "betaGroups",
+                "attributes": {"name": group_name, "isInternalGroup": True,
+                               "hasAccessToAllBuilds": True},
+                "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}}
+        gid = api("POST", "/v1/betaGroups", body)["data"]["id"]
+        print(f"OK: 内部グループ '{group_name}' を作成（id={gid}・全ビルド自動配信ON）")
+
+    existing = {t["attributes"].get("email", "").lower()
+                for t in get_all(f"/v1/betaGroups/{gid}/betaTesters")}
+    for email in emails:
+        email = email.strip()
+        if not email:
+            continue
+        if email.lower() in existing:
+            print(f"  テスター {email}: 追加済み")
+            continue
+        try:
+            api("POST", "/v1/betaTesters",
+                {"data": {"type": "betaTesters",
+                          "attributes": {"email": email},
+                          "relationships": {"betaGroups": {"data": [{"type": "betaGroups", "id": gid}]}}}})
+            print(f"  テスター {email}: 追加しました")
+        except SystemExit as e:
+            found = get_all("/v1/betaTesters", f"filter[email]={email}")
+            if found:
+                api("POST", f"/v1/betaGroups/{gid}/relationships/betaTesters",
+                    {"data": [{"type": "betaTesters", "id": found[0]["id"]}]})
+                print(f"  テスター {email}: 既存レコードをグループに紐付けました")
+            else:
+                print(f"  テスター {email}: 追加失敗（ASC ユーザー未登録の可能性）: {str(e)[:120]}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -285,6 +348,11 @@ def main() -> None:
     p3.add_argument("--project")
     p3.add_argument("--branch", default="main", help="PRの宛先ブランチ（リポジトリのデフォルトブランチ。既定: main）")
 
+    p5 = sub.add_parser("setup-beta-group")
+    p5.add_argument("bundle_id")
+    p5.add_argument("--group-name", default="developer")
+    p5.add_argument("--testers", default="", help="カンマ区切りのテスター email（既存 ASC ユーザー）")
+
     args = parser.parse_args()
     if args.cmd == "register-bundle-id":
         register_bundle_id(args.identifier, args.name)
@@ -294,6 +362,9 @@ def main() -> None:
         check_onboarded(args.app_name)
     elif args.cmd == "create-workflows":
         create_workflows(args.app_name, args.scheme, args.project, args.branch)
+    elif args.cmd == "setup-beta-group":
+        emails = [e for e in args.testers.split(",") if e.strip()]
+        setup_beta_group(args.bundle_id, args.group_name, emails)
 
 
 if __name__ == "__main__":
