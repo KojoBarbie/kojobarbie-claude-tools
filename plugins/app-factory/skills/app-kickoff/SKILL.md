@@ -136,7 +136,9 @@ PRDのコア機能を分解し、下記の**必須issueセット**と合わせ�
    問い合わせ（`mailto:` — `.env` の `SUPPORT_EMAIL`）/ 利用規約（`https://{slug}-lp.web.app/terms`）/
    プライバシーポリシー（`https://{slug}-lp.web.app/privacy`）。加えてアプリバージョン表示。
    リンク先は Step 5.5 の LP に配置済み
-5. **App Store提出準備**（最後）: アイコン・スクショ・審査メタデータ・プライバシー表記
+5. **App Store提出準備**（最後）: アイコン・スクショ・審査メタデータ・プライバシー表記・
+   **App Store カテゴリ（メイン/サブ）**・**著作権表記（`<西暦> <著作権者名>`）**
+   （メタデータ・カテゴリ・著作権は store-release が `docs/store-metadata/ja/` に生成・投入する）
 
 PRDの収益化が広告を含む場合は **広告実装 issue** も追加（AdMob アプリID は Step 8 のチェックリストで
 人間が登録後にコメントされる。受け入れ条件に「`https://{slug}-lp.web.app/app-ads.txt` が 200」を含める）。
