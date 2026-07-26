@@ -3,7 +3,7 @@ name: store-release
 description: >
   iOS アプリの App Store 提出〜審査追跡を自動化する運用スキル。
   prd-vault の portfolio.yml を起点に、リリースすべきアプリを検出して「リリース列車」issue を起票し、
-  PRD からストアメタデータを生成、Xcode Cloud 産のビルドを確保し、24時間の拒否権ウィンドウを経て
+  PRD からストアメタデータを生成、Xcode Cloud 産のビルドを確保し、人間の明示承認（approved）を経て
   ASC API で審査提出、以後の審査状況を追跡する。
   launchd から毎日 6:00 に起動される無人ジョブ（用がある日だけ claude が起動される）であり、
   ユーザーが「リリース準備して」「ストアに出して」「App Store に提出して」「審査状況を見て」
@@ -14,13 +14,15 @@ description: >
 
 TestFlight 配信（Xcode Cloud）までは自動だが、その先の App Store 提出（メタデータ・スクショ・審査提出）が
 人手のままになっている穴を埋めるスキル。**リリース列車**（`release-train` ラベルの issue）を状態機械として、
-「起票 → メタデータ → ビルド → veto ウィンドウ → 提出 → 審査追跡」を毎日の実行で少しずつ前に進める。
+「起票 → メタデータ → ビルド → 承認ゲート → 提出 → 審査追跡」を毎日の実行で少しずつ前に進める。
 
 このスキルの価値の中心は規律にある:
 
 1. **待たない** — ビルド処理中・スクショ未着でもジョブは終了し、次回実行で続きから再開する（毎日走るので急がない）
 2. **冪等** — 二重起票・二重タグ・二重提出をしない。GitHub と ASC の現状態を毎回照会してから動く
-3. **拒否権ウィンドウ** — ストア提出という「外に出る」操作は、起票から24時間の人間の veto 猶予を必ず挟む
+3. **承認ゲート** — App Store への「提出」という外に出る操作は、**人間の明示承認（release-train issue の
+   `approved` ラベル or 👍 リアクション）が無い限り実行しない**。默っていても提出されない（＝提出はオプトイン）。
+   メタデータ生成・TestFlight 用ビルド確保など提出手前の準備は承認前でも自動で進める
 4. **無人時は質問しない** — 判断できないことは issue コメント + Slack に残して次回（または人間）に委ねる
 
 ## 前提と認証
@@ -75,11 +77,27 @@ gh issue list --repo "$GITHUB_OWNER"/<repo> --label release-train --state open \
 判定したら対象アプリのリポジトリに `release-train` ラベルの issue を **1本だけ** 起票する。
 **既に open な `release-train` issue があれば何もしない（冪等）**。本文には必ず含める:
 
-- チェックリスト: `- [ ] メタデータ → - [ ] ビルド → - [ ] veto ウィンドウ通過 → - [ ] 提出 → - [ ] 審査承認`
-- 対象バージョン・起票理由（初回 / PR n件 / 6週経過）
-- **「24時間後の実行で自動提出します。止める場合はこの issue に `hold` ラベルを付けるか close してください」**
+- チェックリスト: `- [ ] メタデータ → - [ ] ビルド → - [ ] 提出承認（人間） → - [ ] 提出 → - [ ] 審査承認`
+- 対象バージョンと**バージョンの決め方の根拠**（初回 v1.0.0 / 機能追加ありでマイナー↑ / バグ修正のみでパッチ↑。
+  ステップ4の判定結果をそのまま書く）
+- 起票理由（初回 / 前回リリース以降マージ済み PR n件 / 6週経過）
+- **人間への依頼を明記した「承認のお願い」ブロック**（オプトイン提出の要）:
 
-起票したら Slack に「🚂 <アプリ名> のリリース列車を発車させました（24h 後に自動提出）」と issue URL を通知する。
+```
+## 🧑‍✈️ 提出の承認をお願いします
+このリリース列車は **approved が付くまで App Store に提出しません**（默っていても提出されません）。
+提出してよければ、この issue に `approved` ラベルを付けるか 👍 リアクションしてください。
+- 対象バージョン: vX.Y.Z（<マイナー↑/パッチ↑ の理由>）
+- 確認してほしい点:
+  1. ストアメタデータ（`docs/store-metadata/ja/` のコミット差分）— 名前/説明/キーワード/**著作権**/**カテゴリ**
+  2. スクリーンショット（`docs/store-assets/`）が最新か
+  3. リリースノート（今回の変更点）
+- 止める/延期する場合は `hold` ラベル、やめる場合は close してください。
+```
+
+起票したら Slack に、**issue URL・対象バージョンとその理由・「approved を付けると提出されます」**を含めて
+「🚂 <アプリ名> vX.Y.Z のリリース列車を用意しました。内容を確認して承認（approved）してください」と通知する
+（24時間で自動提出はしない）。
 
 ### 3. メタデータ準備
 
@@ -93,9 +111,15 @@ gh issue list --repo "$GITHUB_OWNER"/<repo> --label release-train --state open \
 | `description.txt` | 説明文 | 4000字 |
 | `keywords.txt` | キーワード（カンマ区切り） | 100字 |
 | `promotional-text.txt` | プロモーションテキスト | 170字 |
+| `copyright.txt` | 著作権表記（`appStoreVersions.copyright`）。**1行で `<リリース年の西暦> <著作権者名>`**。<br>著作権者名は `.env` の `STORE_COPYRIGHT_HOLDER`、無ければ `GITHUB_OWNER`（例: `2026 KojoBarbie`） | — |
+| `categories.txt` | App Store カテゴリ。**1〜2行**: 1行目 `primary: <ID>`（必須）、2行目 `secondary: <ID>`（任意）。<br>ID は ASC の語彙（`GET /v1/appCategories?filter[platforms]=IOS` で取得。例: `UTILITIES` / `HEALTH_AND_FITNESS` / `PRODUCTIVITY` / `FINANCE`）。<br>GAMES・STICKERS を primary にする場合のみサブカテゴリを `primary_sub1: <ID>` / `primary_sub2: <ID>` で追記（他カテゴリにサブは無い） | — |
 | `privacy.md` | プライバシー情報（収集データ種別・用途。App Privacy 回答の下書き） | — |
 
-文字数制限は生成後に必ず数えて確認する（超過は ASC API が 409 を返す）。既にファイルがあれば再生成しない（冪等）。
+- **著作権（`copyright.txt`）とカテゴリ（`categories.txt`）は必須**。生成漏れがそのままストア提出に穴を開けるため、
+  この2ファイルが無い列車は提出条件（ステップ5）を満たさない
+- カテゴリは PRD のジャンル・元ネタアプリの App Store カテゴリから決める。迷ったら primary のみ設定し
+  secondary は空にする（誤ったカテゴリより無指定が安全）。GAMES/STICKERS 以外はサブカテゴリ行を書かない
+- 文字数制限は生成後に必ず数えて確認する（超過は ASC API が 409 を返す）。既にファイルがあれば再生成しない（冪等）
 
 **プライバシーポリシー URL・サポート URL** は kickoff が生成した LP を使う:
 `https://{slug}-lp.web.app/privacy` と `https://{slug}-lp.web.app`。提出前に 200 を返すことを
@@ -117,38 +141,75 @@ gh issue list --repo "$GITHUB_OWNER"/<repo> --label release-train --state open \
 git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
 ```
 
-2. 未タグならバージョンを決めてタグを push する。初回リリースは `v1.0.0`、以降は最新 `v*` タグから
-   semver のマイナーを上げる（例: `v1.2.0` → `v1.3.0`）。**同名タグが既にあれば push しない（冪等）**
+2. 未タグなら**バージョンを semver ルールで決めて**タグを push する。**同名タグが既にあれば push しない（冪等）**。
+   バージョンの上げ幅は「前回リリース（直近の `v*` タグ）以降の変更の中身」で機械的に決める:
+
+   - **初回リリース** → `v1.0.0`
+   - **前回リリース以降に機能追加が1件でも含まれる** → **マイナーを上げる**（例 `v1.2.0` → `v1.3.0`、パッチは 0 に戻す）
+   - **バグ修正・小改善のみ**（機能追加なし） → **パッチを上げる**（例 `v1.2.1` → `v1.2.2`）
+   - **メジャーは自動で上げない**。メジャー更新は「よほどのとき」であり、人間が release-train issue に
+     `major` ラベルを付ける／明示指示したときだけ `vX.0.0` にする（無ければ絶対にメジャーを触らない）
+
+   機能追加かバグ修正かは、前回タグ以降のマージ済み PR / closed issue の**ラベルとタイトル**で分類する:
+
+   ```bash
+   PREV=$(git -C <repo> tag --list 'v*' --sort=-v:refname | head -1)   # 直近リリースタグ
+   git -C <repo> log --oneline "$PREV"..origin/main                     # 変更の全体像
+   gh pr list -R <owner/repo> --state merged --search "merged:>=<PREVのタグ日>" \
+     --json number,title,labels                                         # 分類の材料
+   ```
+
+   - 機能追加とみなす合図: `feature-proposal`/`feature-approved`/`enhancement`/`feat` 由来、
+     PRD の MVP コア機能実装、タイトルが `feat:`/「〜機能」「追加」など
+   - パッチとみなす合図: `bug`/`fix`/監査（quality-release-cycle）由来、タイトルが `fix:`/「修正」「改善」のみ
+   - 判定に迷う（材料が取れない・混在で機能追加の有無が曖昧）→ **安全側に倒してマイナー**を上げ、
+     判定根拠を release-train issue に `🤖 バージョン判定:` コメントで残す
+   - 決めたバージョンとその理由（マイナー↑/パッチ↑ とその根拠）は起票済み issue 本文の「承認のお願い」にも反映する
 3. ASC API でそのビルドの処理状態を確認する（`GET /v1/builds?filter[app]=<asc_app_id>` で
    最新ビルドの `processingState` が `VALID` になっているか）
 4. **処理中・ビルド未出現でも待ち続けない。** issue に `🤖 ビルド待ち（vX.Y.Z）` とコメントして今日は終了し、
    次回実行で続きから再開する。3日以上ビルドが出現しない場合のみ Slack に異常として通知する
 
-### 5. veto チェックと提出
+### 5. 承認チェックとメタデータ投入・提出
 
-以下が **全て** 揃ったときだけ提出に進む:
+**提出は人間の明示承認が要る（オプトイン）。** 以下が **全て** 揃ったときだけ提出に進む:
 
-- release-train issue が open のまま、`hold` ラベルなしで、**起票から24時間以上経過**している
-- `docs/store-metadata/ja/` のメタデータ一式がコミット済み
+- release-train issue が open のまま、`hold` ラベルなしで、**承認済み**である。承認の判定は次のいずれか:
+  - issue に **`approved` ラベル**が付いている、または
+  - issue 本文に **👍 リアクション**が付いている（`gh api repos/<owner>/<repo>/issues/<n>/reactions` で
+    `content == "+1"` を確認。bot 自身のリアクションは数えない）
+- `docs/store-metadata/ja/` のメタデータ一式がコミット済み（**`copyright.txt` と `categories.txt` を含む**）
 - `docs/store-assets/` にスクリーンショットがある
 - 処理完了（`VALID`）したビルドが ASC にある
 
+**承認がまだ無いときは提出しない。** メタデータ投入・ビルド紐付け（下記1〜4、外に出ない準備）は
+承認前でも進めてよいが、審査提出（5）だけは承認まで実行しない。承認待ちの列車は issue を open のまま残し、
+`🤖 提出承認待ち（vX.Y.Z）` コメントが無ければ1回だけ付けて次回に持ち越す（Slack への再依頼はしない
+＝日次リマインダー／週報の担当）。
+
 提出手順（ASC API。各操作の前に現状態を照会し、済んでいる工程はスキップする）:
 
-1. **バージョン作成**: `appStoreVersions` に対象バージョンが無ければ `POST /v1/appStoreVersions` で作成
-2. **メタデータ投入**: `appStoreVersionLocalizations`（ja）に description / keywords / promotionalText 等を PATCH。
+1. **バージョン作成**: `appStoreVersions` に対象バージョンが無ければ `POST /v1/appStoreVersions` で作成。
+   このとき `attributes.versionString`（vX.Y.Z）と **`attributes.copyright`（`copyright.txt` の内容）** を設定する。
+   既存バージョンで copyright が空／古ければ PATCH で `copyright` を更新する
+2. **カテゴリ投入**: 対象アプリの編集可能な `appInfos` の `relationships.primaryCategory` に `categories.txt` の
+   `primary` を、`secondaryCategory` に `secondary`（あれば）を PATCH で紐付ける（値は `appCategories` の ID）。
+   GAMES/STICKERS のときのみ `primarySubcategoryOne` / `primarySubcategoryTwo` も同様に紐付ける。
+   既に正しいカテゴリが設定済みなら何もしない（冪等）
+3. **メタデータ投入**: `appStoreVersionLocalizations`（ja）に description / keywords / promotionalText 等を PATCH。
    スクリーンショットをアップロード
-3. **ビルド紐付け**: バージョンの `relationships/build` に確保済みビルドを PATCH
-4. **審査提出**: `reviewSubmissions` を作成 → バージョンを item として追加 → `submitted: true` に PATCH。
+4. **ビルド紐付け**: バージョンの `relationships/build` に確保済みビルドを PATCH
+5. **審査提出**: `reviewSubmissions` を作成 → バージョンを item として追加 → `submitted: true` に PATCH。
    **既に `WAITING_FOR_REVIEW` / `IN_REVIEW` のバージョンがあれば提出しない（二重提出防止）**
 
-**初回は人間併走**: そのアプリで ASC API による提出操作が初めての場合（過去の release-train issue に
-`🤖 提出しました` コメントが無い場合）、手順 4 の直前で止めて Slack に通知する:
+**初回はさらに慎重に**: そのアプリで ASC API による提出操作が初めての場合（過去の release-train issue に
+`🤖 提出しました` コメントが無い場合）、`approved` が付いていても手順 5 の直前でもう一度止め、
+App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で確認依頼する:
 
-> 🧑‍✈️ <アプリ名> は初回提出です。提出直前まで準備済み。ASC で内容を確認して提出ボタンを人間が押すか、
-> 「store-release で提出して」と指示してください。
+> 🧑‍✈️ <アプリ名> は初回提出です。承認済みですが提出直前で一旦止めています。ASC で App Privacy 回答・
+> 輸出コンプラ・カテゴリ・著作権を確認し、問題なければ「store-release で提出して」と指示してください。
 
-2回目以降のアプリは全自動で提出してよい。
+2回目以降のアプリは、承認（approved）さえ付いていれば全自動で提出してよい。
 
 提出したら issue に `🤖 提出しました（vX.Y.Z）` とコメントし、チェックリストを更新する。
 **issue は close せず「審査中」状態として open のまま残す**。Slack に「📮 <アプリ名> vX.Y.Z を審査提出しました」と通知する。
@@ -176,8 +237,8 @@ git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
 対話できるので以下だけ変える:
 
 - 対象アプリが指定されていればそのアプリだけ処理する
-- 「store-release で提出して」と明示されたら、初回併走の停止点・24時間ウィンドウを人間の指示として通過してよい
-  （hold ラベルが付いている場合だけは、外していいか確認する）
+- 「store-release で提出して」と明示されたら、それが承認そのものなので初回併走の停止点・approved 未付与も
+  人間の指示として通過してよい（hold ラベルが付いている場合だけは、外していいか確認する）
 
 ## 禁止事項・スコープ外
 
@@ -188,10 +249,11 @@ git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
 
 ## 設計メモ — なぜこの形か
 
-- **リリース列車 = issue 1本**にしたのは、状態（どこまで進んだか）・人間の拒否権（hold / close）・
+- **リリース列車 = issue 1本**にしたのは、状態（どこまで進んだか）・人間の承認/拒否（approved / hold / close）・
   監査ログ（🤖 コメント）を1箇所に集約するため。ジョブ自体は状態を持たず、毎回 issue と ASC を読んで再開する
-- **24時間 veto** は「提出される」がデフォルト（設計書 §6: 人間が何もしなくてもサイクルが進む）としつつ、
-  外に出る操作にだけ機械的なブレーキを付けるため
+- **承認ゲート（approved オプトイン）** は、ストア提出という取り消しにくい外向き操作を「默っていても出る」に
+  しないため。提出手前（メタデータ・ビルド）は自動で全部用意し、人間の判断は「出してよいか」の1点に絞る。
+  以前は24時間 veto（オプトアウト＝默っていると出る）だったが、承認を要件（オプトイン）に反転した
 - **初回だけ人間併走**は設計書のロールアウト方針（Phase 4〜5）そのもの。ASC API の提出系は
   アプリ固有の落とし穴（App Privacy 未回答・輸出コンプラ等）が初回に集中するため、2回目以降とリスクが非対称
 - **「待たない」原則**は、毎日 6:00 に必ず走るジョブだから成立する。ポーリングで claude を占有するより、

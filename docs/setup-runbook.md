@@ -49,6 +49,7 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 | `SLACK_WEBHOOK_URL_FEATURE` | 機能提案系の専用チャンネル | 任意（無ければデフォルトへ） |
 | `SLACK_WEBHOOK_URL_FACTORY` | factory-build / portfolio-review 系の専用チャンネル | 任意（同上） |
 | `SUPPORT_EMAIL` | 各アプリの設定画面と LP の問い合わせ先 | ✅ |
+| `STORE_COPYRIGHT_HOLDER` | ストア提出の著作権表記に使う著作権者名（例: `KojoBarbie`）。store-release が `<西暦> <この値>` を `copyright.txt` に生成 | 任意（無ければ `GITHUB_OWNER` を使う） |
 | `ADMOB_PUBLISHER_ID` | LP の app-ads.txt 生成（`pub-…`。app-ads.txt 上で公開される値） | ✅（広告収益化するなら） |
 | `REVENUECAT_API_KEY` | 収益計測（portfolio-review）+ kickoff のプロジェクト自動作成 | 任意（無ければ収益は未計測扱い・作成は人力） |
 | GA / BigQuery のサービスアカウント認証 | Firebase Analytics 計測（firebase-bigquery スキル） | 任意（アプリごとの `analytics_env_prefix` とセット） |
@@ -85,7 +86,7 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 | キックオフ直後 | **ASC でアプリレコード作成 + Xcode Cloud 初回オンボーディング + AdMob アプリ追加（計10分）**。Firebase / RevenueCat / LP の Firebase Hosting は自動（失敗時のみフォールバック手順が Slack に届く） | そのアプリのリリース・広告収益化が進まない（3日ごとにリマインド） |
 | リリース前（1回/アプリ） | スクリーンショットを `docs/store-assets/` に置く | 提出が保留される（Slack で1回だけ依頼が来る） |
 | アプリ初回提出時（1回/アプリ） | store-release が提出直前で止まるので、ASC で内容確認して提出（or「提出して」と指示） | 提出されないまま待機 |
-| 水〜木（列車発車の通知が来たら・任意） | 24時間以内に veto するなら release-train issue に `hold` or close | **提出される**（それが既定の意図） |
+| 提出承認の通知が来たら | release-train issue の内容（メタデータ・スクショ・著作権・カテゴリ・バージョン）を確認し、よければ `approved` ラベル or 👍。延期は `hold`、やめるなら close | **提出されない**（承認しない限り待機） |
 | 金 | 週報を読む。「要判断」があれば返信 | 保守的側（現状維持）に倒れる |
 | 随時 | App Review リジェクトへの対応（自動再提出はしない） | そのアプリのリリースが止まる |
 

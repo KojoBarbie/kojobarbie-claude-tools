@@ -1,10 +1,10 @@
 #!/bin/bash
 # App Factory: store-release — 毎日 6:00
-# App Store 提出パイプライン（リリース列車の起票 → メタデータ → veto 24h → 提出 → 審査追跡）
+# App Store 提出パイプライン（リリース列車の起票 → メタデータ → 承認ゲート → 提出 → 審査追跡）
 # launchd (com.claude.store-release) から呼び出される
 # bash 事前判定: 用がある日だけ claude を起動する
 #   - review ステージのアプリがある
-#   - open な release-train issue がある（veto 経過チェック・審査追跡）
+#   - open な release-train issue がある（承認チェック・提出・審査追跡）
 #   - building アプリで実装系 open issue が 0 件（= MVP 完了、列車の起票候補）
 #   - 水曜日（定期リリース列車の週次フルスキャン）
 
@@ -77,9 +77,13 @@ if ! $CLAUDE -p --permission-mode bypassPermissions \
   << 'PROMPT' >> "$LOG_FILE" 2>&1
 app-factory:store-release スキルを最初から最後まで実行してください。
 
-- リリース列車（release-train issue）の状態機械と 24時間拒否権のルールを厳守すること
+- リリース列車（release-train issue）の状態機械を厳守すること
+- **App Store への提出は人間の明示承認（release-train issue の approved ラベル or 👍）が無い限り実行しないこと**。
+  メタデータ生成・TestFlight 用ビルド確保など提出手前の準備は承認前でも進めてよい
+- バージョンは semver ルールで決めること（機能追加ありならマイナー↑ / バグ修正のみならパッチ↑ /
+  メジャーは人間指示か major ラベルのときだけ）
 - 提出・タグ作成などの操作は必ず冪等に（ASC と GitHub の現状態を照会してから）
-- そのアプリで ASC API による提出が初回の場合は、提出直前で止めて人間併走の案内を Slack に出すこと
+- そのアプリで ASC API による提出が初回の場合は、承認済みでも提出直前で止めて人間併走の案内を Slack に出すこと
 - 無人実行なのでユーザーへの質問はしないこと
 PROMPT
 then
