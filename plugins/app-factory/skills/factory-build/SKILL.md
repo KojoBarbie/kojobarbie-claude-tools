@@ -150,18 +150,29 @@ gh pr diff <PR番号> --name-only               # センシティブ領域の判
 
 ## ステップ 4: 報告
 
-実行結果を Slack（`SLACK_WEBHOOK_URL_FACTORY`、無ければ `SLACK_WEBHOOK_URL`）に短く1通:
+**実行のたびに、その回の活動サマリを必ず Slack に1通出す**（`SLACK_WEBHOOK_URL_FACTORY`、
+無ければ `SLACK_WEBHOOK_URL`）。人間が放置していても「今回 factory が何をして・どの PR になったか」を
+毎回追える状態を作るのが目的。**触れた PR は1本残らず URL を添える**（PR 名だけで URL 無しは禁止）。
 
-- マージした PR（アプリ名 / issue / 1行説明）
-- 人間に回した PR とその理由
-- **人間コメントに対応した PR**（ステップ0 #4 の「返信したよ」。修正/返信の件数と PR URL、
-  「確認して merge か追記コメントを」）。同一名義で GitHub 通知が飛ばないため、これは省略しない
-- `factory-blocked` にした issue
-- 着手できる issue が1件も無かった場合はその旨（毎回は通知しない — 直近3回連続で空のときだけ）
+ヘッダに実行時刻と1行サマリ（例:「🏭 factory-build 07-26 05:00 — 作成2 / マージ1 / コメント対応1」）、
+続けて以下を**該当があるものだけ**、各行に PR URL 付きで:
+
+- **新規作成した PR**: `アプリ名 #issue 1行説明 → <PR URL>`（auto-merge したか / 人間待ちか も1語で添える）
+- **マージした PR**: `アプリ名 #issue → <PR URL>`
+- **人間コメントに対応した PR**（ステップ0 #4 の「返信したよ」）: `アプリ名 #PR 修正X/返信Y → <PR URL>`
+  「確認して merge か追記コメントを」。同一名義で GitHub 通知が飛ばないため省略しない
+- **人間に回した PR とその理由**（auto-merge 条件を満たさなかった等）: `アプリ名 #PR 理由 → <PR URL>`
+- **`factory-blocked` にした issue**: `アプリ名 #issue 理由 → <issue URL>`
+- **着手を見送った理由**（`needs-clarification` 化・依存待ち等、あれば1行）
+
+各 PR/issue の URL は `gh pr view <n> --json url -q .url` / `gh issue view <n> --json url -q .url` で取得する。
+
+**着手できる issue が1件も無かった回**だけは例外で、`🏭 factory-build <時刻> — 着手可能な issue なし（異常なし）`
+の1行だけを出す（活動ゼロでも「動いたこと」は毎回伝える。ただし1行に圧縮してノイズを抑える）。
 
 ## エッジケース
 
-- **対象 issue ゼロ**: 正常。静かに終了（上記の3回ルールでのみ通知）
+- **対象 issue ゼロ**: 正常。ステップ4 の「着手可能な issue なし（異常なし）」1行だけを出して終了
 - **リポジトリのテストコマンド不明**: `xcodebuild test` / `fvm flutter test` を自動検出で試し、
   それでも不明なら実装せず `needs-clarification` で人間へ
 - **コンフリクト**（同じファイルを触る issue が並んだ場合）: 2件目の実装前に必ず

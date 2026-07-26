@@ -41,6 +41,8 @@ app-factory:factory-build スキルを最初から最後まで実行してくだ
 - 安全レールを厳守すること（1回最大2 issue、auto-merge はスイッチと全条件を満たすときだけ、
   センシティブ領域の除外、factory-wip での排他、使い捨て worktree での作業）
 - 前回持ち越した factory/ ブランチの open PR の回収を先に行うこと
+- **実行のたびに活動サマリを Slack に必ず1通出すこと（触れた PR は1本残らず URL 付きで）。
+  着手可能な issue が無い回も「着手なし（異常なし）」の1行を出すこと**
 - 無人実行なのでユーザーへの質問はしないこと。判断できない issue は needs-clarification で人間に回すこと
 PROMPT
 then
