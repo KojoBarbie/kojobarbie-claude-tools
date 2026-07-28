@@ -18,7 +18,7 @@ feature-hunt → ship-issue → quality-release-cycle）に、欠けていた輪
 │   ↓ [人:PRDマージ]                 │ │  (KPI計測→ゲート    │ │   ↓ [人:👍/go]    │
 │ app-kickoff ─→ [人:ASC+Xcode 5分] │ │   判定→週報)        │ │ growth-advisor ★  │
 │   ↓                                │ │ quality-release-    │ │   ↓               │
-│ factory-build ★ (自律実装×2/日)    │ │ cycle audit         │ │ factory-build ★   │
+│ factory-build ★ (自律実装×3/日)    │ │ cycle audit         │ │ factory-build ★   │
 │   ↓                                │ │   ↓                 │ │   ↓               │
 │ store-release ★ ─→ App Store      │ │ factory-build ★     │ │ store-release ★   │
 └────────────────────────────────────┘ └─────────────────────┘ └──────────────────┘
@@ -182,8 +182,9 @@ prd-vault に置く理由: PRD・却下履歴・config.yml（スコアリング�
 
 ## 4. 週間カレンダー
 
-深夜帯を積極的に使う: 重いジョブ（実装・監査・提案）は深夜〜早朝に回し、
-人が読む通知（提出承認の依頼・週報）だけが日中に届くようにする。
+深夜帯を積極的に使う: 監査・提案などのリポジトリ横断ジョブは深夜〜早朝に回す。
+factory-build だけは滞留解消のスループットを優先して 8時間ごと（5:00 / 13:00 / 21:00）に走らせ、
+人が読む通知（提出承認の依頼・週報）は日中に届くようにする。
 launchd はスリープ中に時刻を過ぎた場合、次の起床時にまとめて1回実行する。
 
 | 曜日・時刻 | ジョブ | 状態 |
@@ -191,7 +192,7 @@ launchd はスリープ中に時刻を過ぎた場合、次の起床時にまと
 | 月 9:00 | app-idea-hunt（JTBD分析+KPI設計を強化 ☆） | 既存を強化 |
 | 毎日 9:00 / 21:00 | prd-approval-check（マージ検知→kickoff、Xcode Cloud ポーリング） | 既存 |
 | **平日 3:00** | **factory-dispatch**（割当表に従い feature-hunt / audit / growth-advisor を1日1リポジトリ実行） | ★新規 |
-| **毎日 5:00 / 23:00** | **factory-build**（issue を選び自律実装。1回最大2件 = 最大4件/日） | ★新規 |
+| **8時間ごと 5:00 / 13:00 / 21:00** | **factory-build**（issue を選び自律実装。1回最大3件・同一アプリ1件 = 最大9件/日） | ★新規 |
 | **毎日 6:00** | **store-release**（bash 事前判定で用がある日だけ起動。列車起票→承認ゲート→提出→審査追跡） | ★新規 |
 | **金 17:00** | **portfolio-review**（計測→ゲート判定→portfolio.yml 更新→翌週の割当表生成→週報） | ★新規 |
 
@@ -203,12 +204,14 @@ launchd はスリープ中に時刻を過ぎた場合、次の起床時にまと
 ### factory-build（実装の自動化 — 現状最大のボトルネック解消）
 
 現状: feature-hunt や audit が Issue を作っても、人間が `ship-issue N` を起動して計画承認するまで
-何も進まない。これを**1日2回（5:00 / 23:00 の深夜帯）**の自動ジョブにする。
+何も進まない。これを**8時間ごと（5:00 / 13:00 / 21:00）**の自動ジョブにする。
 
 - portfolio.yml を読み、`building` → `growing` → `validating`(監査「高」のみ) の順でアプリを走査
 - 着手可能な issue を優先度順に選ぶ: MVP issue（kickoff起票・依存順。計測実装 issue を優先）→
   承認済み機能 sub-issue（`feature-approved` の子）→ 監査 issue（高→中）
-- 1回の実行で最大2件。issue ごとに **ship-issue の「無人モード」**で自走: プランモードには
+- 1回の実行で最大3件、**かつ同一アプリからは最大1件**（＝最大3アプリが1変更ずつ。在庫の多いアプリの
+  独占を防ぎ、1アプリ＝1ビルド1変更に保って TestFlight の実機確認を切り分け可能にする。回収マージも同制約）。
+  issue ごとに **ship-issue の「無人モード」**で自走: プランモードには
   入らないが**計画→実装の順序は守る**。計画（アプローチ・変更ファイル・テスト方針・受け入れ条件の
   解釈）を実装前に issue へ `🤖 実装計画:` コメントとして投稿し、PR 本文にも残す
   （承認ゲートだけを外し、人間が事後に計画へ遡れる形を保つ）
@@ -339,9 +342,9 @@ quality-release-cycle は dev-workflow-tools から移動）。強化はスキ�
 ## 10. コストと安全性の考慮
 
 - **トークン消費の平準化が設計の柱**: リポジトリ横断ジョブは廃止し、1日1リポジトリの割当表方式に。
-  日次の claude 起動は最大4回（factory-build×2 + dispatch×1 + 既存 prd-approval-check）+
+  日次の claude 起動は最大5回（factory-build×3 + dispatch×1 + 既存 prd-approval-check）+
   空スロット日は bash 判定のみで claude 不起動
-- factory-build が最も重い（1回で issue 2件の実装）。消費が問題になったら1回の上限を下げる
+- factory-build が最も重い（1回で最大 issue 3件の実装 × 1日3回）。消費が問題になったら1回の上限か実行回数を下げる
 - すべてのジョブはジョブ実行環境（`$APP_FACTORY_HOME`）の共通規約に従う: config.env・`.env` 読込 →
   `claude -p --permission-mode bypassPermissions` → ログ → 失敗時 Slack。
   **シークレットは .env のみ、リポジトリに置かない**
