@@ -38,7 +38,8 @@ if ! $CLAUDE -p --permission-mode bypassPermissions \
   << 'PROMPT' >> "$LOG_FILE" 2>&1
 app-factory:factory-build スキルを最初から最後まで実行してください。
 
-- 安全レールを厳守すること（1回最大2 issue、auto-merge はスイッチと全条件を満たすときだけ、
+- 安全レールを厳守すること（1回最大2 issue かつ同一アプリからは最大1 issue、
+  回収マージも1アプリ1回1変更まで、auto-merge はスイッチと全条件を満たすときだけ、
   センシティブ領域の除外、factory-wip での排他、使い捨て worktree での作業）
 - 前回持ち越した factory/ ブランチの open PR の回収を先に行うこと
 - **実行のたびに活動サマリを Slack に必ず1通出すこと（触れた PR は1本残らず URL 付きで）。
