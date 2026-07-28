@@ -119,7 +119,8 @@ PLIST
 CAL_BUILD='    <key>StartCalendarInterval</key>
     <array>
         <dict><key>Hour</key><integer>5</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Hour</key><integer>23</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
     </array>'
 CAL_DISPATCH='    <key>StartCalendarInterval</key>
     <array>

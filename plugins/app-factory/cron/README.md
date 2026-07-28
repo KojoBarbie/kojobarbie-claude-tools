@@ -15,14 +15,15 @@ App Factory（docs/app-factory.md）の定期実行をジョブ実行環境（`$
 
 | 時刻 | ジョブ | claude 起動条件 |
 |---|---|---|
-| 毎日 5:00 / 23:00 | factory-build（issue の自律実装） | factory_apps.tsv に building/growing/validating があるときだけ |
+| 8時間ごと 5:00 / 13:00 / 21:00 | factory-build（issue の自律実装） | factory_apps.tsv に building/growing/validating があるときだけ |
 | 平日 3:00 | factory-dispatch（feature-hunt / audit / growth-advisor を1日1リポジトリ） | 割当表に当日スロットがあるときだけ |
 | 毎日 6:00 | store-release（リリース列車・承認ゲート・審査追跡） | review ステージ / open な release-train / MVP 完了 / 水曜、のいずれか |
 | 毎日 12:00 | factory-reminder（人力タスクの滞留リマインド） | 起動しない（bash + gh のみ。滞留があるときだけ Slack に1通） |
 | 金 17:00 | portfolio-review（計測→判定→割当表生成→週報） | 常時（週1） |
 
-重いジョブ（実装・監査・提案）は深夜に回し、人が読む通知（提出承認の依頼・週報）だけ
-朝〜夕方に届く設計。launchd はスリープ中に時刻を過ぎた場合、次の起床時にまとめて1回実行する。
+監査・提案は深夜に回す。factory-build は滞留解消を優先して 8時間ごと（5:00 / 13:00 / 21:00）に走らせ、
+人が読む通知（提出承認の依頼・週報）は朝〜夕方に届く設計。
+launchd はスリープ中に時刻を過ぎた場合、次の起床時にまとめて1回実行する。
 
 ## データファイル（`$APP_FACTORY_HOME/data/`）
 

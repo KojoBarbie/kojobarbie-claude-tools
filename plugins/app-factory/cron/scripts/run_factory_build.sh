@@ -1,5 +1,5 @@
 #!/bin/bash
-# App Factory: factory-build — 毎日 5:00 / 23:00
+# App Factory: factory-build — 8時間ごと（5:00 / 13:00 / 21:00）
 # ポートフォリオ全体から着手可能な issue を選び、自律実装 → PR → 条件付き auto-merge
 # launchd (com.claude.factory-build) から呼び出される
 # bash 事前判定: 対象ステージのアプリが1つも無ければ claude を起動しない
@@ -34,11 +34,11 @@ fi
 
 cd "$PROJECT_DIR"
 if ! $CLAUDE -p --permission-mode bypassPermissions \
-  --append-system-prompt "作業ディレクトリは ${PROJECT_DIR} です。これは launchd による無人実行（App Factory の factory-build、1日2回）です。" \
+  --append-system-prompt "作業ディレクトリは ${PROJECT_DIR} です。これは launchd による無人実行（App Factory の factory-build、8時間ごと・1日3回）です。" \
   << 'PROMPT' >> "$LOG_FILE" 2>&1
 app-factory:factory-build スキルを最初から最後まで実行してください。
 
-- 安全レールを厳守すること（1回最大2 issue かつ同一アプリからは最大1 issue、
+- 安全レールを厳守すること（1回最大3 issue かつ同一アプリからは最大1 issue、
   回収マージも1アプリ1回1変更まで、auto-merge はスイッチと全条件を満たすときだけ、
   センシティブ領域の除外、factory-wip での排他、使い捨て worktree での作業）
 - 前回持ち越した factory/ ブランチの open PR の回収を先に行うこと
