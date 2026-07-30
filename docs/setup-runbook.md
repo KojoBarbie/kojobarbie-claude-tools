@@ -63,7 +63,9 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 - [ ] 2. **ホームスキルの削除**（プラグイン版と重複すると自動トリガーが競合する）:
   `rm -rf ~/.claude/skills/{app-idea-hunt,app-kickoff,feature-hunt,xcode-cloud-setup}`
 - [ ] 3. `run_prd_approval_check.sh` の `ASC_CLOUD` パスをプラグイン内解決に修正
-  （手順: [cron/README.md](../plugins/app-factory/cron/README.md) の「ホームスキルからの移行」）
+  （手順: [cron/README.md](../plugins/app-factory/cron/README.md) の「ホームスキルからの移行」）。
+  あわせて prd-vault に指名モード用のラベルを作成:
+  `gh label create idea --color FBCA04 --description "このネタをPRD化してほしい（app-idea-hunt 指名モードが拾う）"`
 - [ ] 4. `.env` に `APPLE_TEAM_ID` を追加（§2 の任意キーもこのタイミングで）
 - [ ] 5. 定期実行の配備: `plugins/app-factory/cron/install.sh`（まず `--dry-run` で確認推奨）
 - [ ] 6. **portfolio-review を1回対話実行**して portfolio.yml のブートストラップ内容
@@ -89,6 +91,11 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 | 提出承認の通知が来たら | release-train issue の内容（メタデータ・スクショ・著作権・カテゴリ・バージョン）を確認し、よければ `approved` ラベル or 👍。延期は `hold`、やめるなら close | **提出されない**（承認しない限り待機） |
 | 金 | 週報を読む。「要判断」があれば返信 | 保守的側（現状維持）に倒れる |
 | 随時 | App Review リジェクトへの対応（自動再提出はしない） | そのアプリのリリースが止まる |
+
+上記とは別に、**任意の操作**として作りたいネタを自分から投げられる: prd-vault に `idea` ラベルの issue を
+立てると（`ideas/` からの昇格ならタイトルに slug、持ち込みなら本文に雑書きでよい）、毎日2回の
+prd-approval-check が拾って app-idea-hunt の指名モードを走らせ、審査を通したうえで PRD の PR を作る。
+懸念があった場合は issue をクローズせず 🤖 コメントで提示して止まるので、それでも進めたければ返信する。
 
 ## 5. アプリ1本あたりの人力ポイント（時系列まとめ）
 
