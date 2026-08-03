@@ -39,6 +39,7 @@ if ! $CLAUDE -p --permission-mode bypassPermissions \
 app-factory:factory-build スキルを最初から最後まで実行してください。
 
 - 安全レールを厳守すること（1回最大3 issue かつ同一アプリからは最大1 issue、
+  open PR が10本以上のリポジトリには新規 PR を出さない（滞留ガード）、
   回収マージも1アプリ1回1変更まで、auto-merge はスイッチと全条件を満たすときだけ、
   センシティブ領域の除外、factory-wip での排他、使い捨て worktree での作業）
 - 前回持ち越した factory/ ブランチの open PR の回収を先に行うこと

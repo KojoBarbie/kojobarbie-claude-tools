@@ -66,7 +66,7 @@ GitHub issue から PR・セルフレビューまでの開発ワークフロー�
 | **app-idea-hunt** | 海外市場からネタ発掘 → JTBD 分析（ジョブ分解・人気の因果・日本への移転可能性）→ KPI 設計（具体的な数値目標）→ モック/トンマナページ生成（prd-vault の showcase サイト）→ PRD を PR として提案。 |
 | **app-kickoff** | マージされた PRD から開発環境を一式セットアップ（XcodeGen・GitHub リポジトリ・MVP issue（計測実装 issue 必須）・デザインシート・Bundle ID・Slack 通知）。 |
 | **xcode-cloud-setup** | ASC API で TestFlight ワークフロー2本（PR / タグトリガー）を自動作成。Bundle ID 登録も担当。 |
-| **factory-build** | 「手」。ポートフォリオ全体から issue を優先度順に選び、計画承認なしで実装 → PR → セルフレビュー → 条件付き auto-merge（段階導入スイッチ + 安全条件）。1回最大2件・1日2回。 |
+| **factory-build** | 「手」。ポートフォリオ全体から issue を優先度順に選び、計画承認なしで実装 → PR → セルフレビュー → 条件付き auto-merge（段階導入スイッチ + 安全条件）。1回最大3件（同一アプリ1件）・8時間ごと。open PR が10本以上溜まったリポジトリには新規 PR を出さない。 |
 | **store-release** | App Store 提出の自動化。MVP 完了検知 → PRD からメタデータ生成 → `release-train` issue による24時間拒否権 → ASC API で提出 → 審査追跡。初回は人間併走。 |
 
 ②検証・改善 / ③育てる:
