@@ -114,12 +114,12 @@ monetization の採点では「**課金した先に得られる未来**」が一
 
 ## Step 8: モックとトンマナ（showcase）
 
-PRD化する案ごとに、prd-vault の `showcase/`（Next.js App Router・静的エクスポート・Firebase Hosting デプロイ前提）へ確認用の2ページを作る。**PRDと同じブランチ・同じPRに含める**（コミットは Step 10 で行う）。`ideas/` 止まりの案には作らない。ディレクトリ構成・apps.json スキーマ・ページに含める要素・ブートストラップ手順は [references/showcase-spec.md](references/showcase-spec.md) を読むこと。
+PRD化する案ごとに、prd-vault の `showcase/`（Next.js App Router・静的エクスポート・**Vercel** デプロイ前提。LP は Firebase Hosting のままなので混同しない）へ確認用の2ページを作る。**PRDと同じブランチ・同じPRに含める**（コミットは Step 10 で行う）。`ideas/` 止まりの案には作らない。ディレクトリ構成・apps.json スキーマ・ページに含める要素・ブートストラップ手順は [references/showcase-spec.md](references/showcase-spec.md) を読むこと。
 
 - `showcase/app/apps/{slug}/tone/page.tsx` — トンマナ: カラーパレットのスウォッチ（hex付き）・タイポグラフィ・余白/角丸の方針・ムードキーワード・Do/Don't。**ダークモード禁止**の規約に沿った明るい配色にする
 - `showcase/app/apps/{slug}/mock/page.tsx` — コア画面のモック: CSSで描くiPhoneフレーム内に主要1〜2画面。トンマナページの配色に従う。静的でよい
 - `showcase/apps.json` に `{ slug, name, status, prd, createdAt }` を追記する（一覧ページ `showcase/app/page.tsx` がこれを読む）
-- `showcase/` が存在しなければ references の手順で最小構成をブートストラップし、Firebase Hosting 接続（1回だけの人間作業）を Step 11 の Slack 通知にチェックリストで含める
+- `showcase/` が存在しなければ references の手順で最小構成をブートストラップする。Vercel プロジェクト（`pv-showcase-12ced869`）は接続済みなので、人間の接続作業は不要
 - 作成後、`showcase/` で `npx next build` が通ることを確認する（`node_modules` が無ければ先に `npm install`）
 
 ## Step 9: 記帳（main に直接コミット）
@@ -158,8 +158,8 @@ PRD要約（アプリ名・一言コンセプト・スコア・想定収益・PR
 
 トンマナ・モックの確認先も添える:
 
-- Firebase Hosting 接続済みなら `https://{サイト名}.web.app/apps/{slug}/tone` と `.../apps/{slug}/mock` のURL
-- 未接続なら「PR内のファイルで確認」と一言添え、Step 8 でブートストラップした場合は Firebase Hosting 接続のチェックリスト（prd-vault 専用の Firebase プロジェクトを作り `firebase deploy --only hosting`。1回だけの人間作業。詳細は showcase-spec.md）を含める
+- PR を上げると Vercel が**プレビューを自動デプロイして PR にコメント**するので、基本は「PR のプレビューリンクから確認」と案内する。プレビュー URL は Vercel ログインが必要（Vercel Authentication）
+- PR 作成直後でプレビュー URL がまだ取れていない場合に備え、マージ後の本番 URL `https://pv-showcase-12ced869.vercel.app/apps/{slug}/tone` と `.../apps/{slug}/mock` も併記する
 
 ## 収穫ゼロのとき
 
