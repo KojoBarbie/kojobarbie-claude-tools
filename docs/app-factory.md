@@ -94,7 +94,7 @@ feature-hunt → ship-issue → quality-release-cycle）に、欠けていた輪
 
 「文章の PRD だけでは Go 判断がしづらい」を解消するため、app-idea-hunt は PRD と同時に
 **モック**（コア画面の見た目）と**トンマナ**（配色・タイポ・ムード）を作り、
-prd-vault 内の **showcase サイト**（`showcase/`、Next.js 静的エクスポート → Firebase Hosting）に集約する:
+prd-vault 内の **showcase サイト**（`showcase/`、Next.js 静的エクスポート → Vercel）に集約する:
 
 - アプリごとに2ページ: `/apps/<slug>/tone`（パレット・タイポグラフィ・Do/Don't。ダークモード
   禁止の規約を反映）と `/apps/<slug>/mock`（iPhone フレーム内のコア画面1〜2枚。トンマナ準拠）
@@ -102,7 +102,8 @@ prd-vault 内の **showcase サイト**（`showcase/`、Next.js 静的エクス�
   まとめてレビュー**できる。Slack 通知に showcase の URL を添える
 - 一覧ページ（`/`）が全アプリのモック/トンマナ/ステータスのカタログになる
 - app-kickoff のデザインコンセプトシートは tone ページを正として引き継ぐ
-- 初回のみ人間が prd-vault 専用の Firebase プロジェクトを作り showcase を Hosting へデプロイする（1回だけ）
+- Vercel プロジェクト `pv-showcase-12ced869` が prd-vault に接続済み。**PR ごとにプレビューが自動デプロイされ PR にコメントが付く**ので、人間の接続作業はもう無い
+- showcase だけ Vercel なのは、PR プレビューと Vercel Authentication による認証ゲートが効くため。**LP は「製品やサービスの販売の宣伝」に当たり Hobby の非商用条件を外れるので Firebase Hosting のまま**（この使い分けを崩さない）
 
 ### 指名モード（人間の側から「これを作りたい」と言う口）
 
@@ -246,6 +247,10 @@ launchd はスリープ中に時刻を過ぎた場合、次の起床時にまと
   ON でも全条件を満たす必要がある: テスト green + CI green +
   セルフレビューの高 severity 指摘ゼロ + 差分 600 行未満 + マイグレーション・課金・権限まわりを触っていない
 - 満たさない場合は PR を open のまま残し、Slack と週報で人間に回す
+- **PR 滞留ガード: open PR が10本以上のリポジトリには新規 PR を出さない**（そのアプリの issue は
+  1件も着手しない）。回収マージと人間コメントへの対応は滞留中も継続するので、レビューが進んで
+  10本を切れば自動的に再開する。真のボトルネックは生産量ではなく**人間のレビュー帯域**であり、
+  修正 PR が15〜16本溜まると人間が処理を諦めて PR の山ごと死ぬため、そこに合わせて流入を絞る
 - **人間との修正のやり取りは GitHub 上で完結**: 実装前なら issue 本文の編集/コメント、実装後なら
   PR へのコメント（インライン単発コメント or PR 全体コメント。同一名義のため正式 Review = approve/
   request-changes は自分の PR に付けられないので普通のコメントで指示する。次回実行時に修正 or
@@ -364,7 +369,7 @@ quality-release-cycle は dev-workflow-tools から移動）。強化はスキ�
   .env・logs・data・launchd 実体。`cron/install.sh` が配備し、移行手順は `cron/README.md`
   （ホームスキルの削除・run_prd_approval_check.sh の asc_cloud.py パス修正を含む）
 - `prd-vault`（private）: PRD・portfolio.yml（portfolio-review が自動生成）・
-  showcase サイト（app-idea-hunt が自動ブートストラップ。Firebase Hosting 接続のみ人間が1回）
+  showcase サイト（app-idea-hunt が自動ブートストラップ。Vercel 接続済みで人間の作業は無し）
 
 ## 10. コストと安全性の考慮
 

@@ -1,10 +1,18 @@
 # showcase サイト仕様（prd-vault/showcase）
 
-アイデア段階のトンマナ＋モックを1か所で確認するための静的サイト。prd-vault リポジトリの `showcase/` に置き、**Firebase Hosting** でデプロイする（Vercel は使わない — 無料枠が商用利用不可のため）。
+アイデア段階のトンマナ＋モックを1か所で確認するための静的サイト。prd-vault リポジトリの `showcase/` に置き、**Vercel** でデプロイする。
 
-- Next.js App Router を **静的エクスポート**（`next.config.mjs` に `output: 'export'`）。全ページ静的（Server Component のみ、ビルド時に JSON を読む）。API 呼び出し・シークレットなし。`next build` で `out/` が生成される
+**接続済み（2026-08-05）**: Vercel プロジェクト `pv-showcase-12ced869`（Root Directory=`showcase`・Production Branch=`main`）が prd-vault の GitHub リポジトリに接続済み。**PR を上げると自動でプレビューがデプロイされ、PR にプレビュー URL がコメントされる**ので、以後の人間作業は不要。
+
+- 本番 URL: `https://pv-showcase-12ced869.vercel.app`
+- プレビュー URL: PR ごとに自動生成（PR コメントを見る）
+
+> **なぜ Vercel か（LP との使い分け）**: Vercel の Hobby プランは非商用に限られるが、[Fair Use Guidelines](https://vercel.com/docs/limits/fair-use-guidelines) が列挙する商用の条件（決済・広告・製品やサービスの販売の宣伝・アフィリエイト・ホスティングの対価）に showcase はどれも当たらない（PRD のモックを本人が見るだけの内部ツール）。
+> 一方 **LP は「製品やサービスの販売を宣伝」に当たるため Vercel を使わず Firebase Hosting のまま**（app-kickoff の external-services.md 参照）。この使い分けを崩さないこと。
+
+- Next.js App Router を **静的エクスポート**（`next.config.mjs` に `output: 'export'`）。全ページ静的（Server Component のみ、ビルド時に JSON を読む）。API 呼び出し・シークレットなし。`next build` で `out/` が生成される。Vercel は静的エクスポートをそのまま配信できるので、この設定は移設可能性のために残している
 - **ダークモード禁止**（アプリ全体の規約）。全ページ明るい背景
-- Note: prd-vault は private リポジトリなので showcase に何を置いてもよいが、Firebase Hosting の公開 URL（`https://{サイト名}.web.app`）は誰でも開けるため、**推測されにくいサイト名**（ランダムなサフィックス付き等）を使う
+- **Deployment Protection**: Vercel Authentication + Standard Protection（Hobby でも利用可）。プレビュー URL とデプロイ URL は Vercel ログイン必須になる。ただし **Standard Protection では本番 URL は保護されない**（保護には Pro が必要）ため、prd-vault が private でも本番 URL は誰でも開ける前提で考える。だからプロジェクト名に推測されにくいランダムサフィックスを付けている（`pv-showcase-12ced869`）。プロジェクト名を変えると本番 URL も変わるので、むやみに変えない
 
 ## ディレクトリ構成
 
@@ -12,7 +20,6 @@
 showcase/
 ├── package.json
 ├── next.config.mjs      # output: 'export'（静的エクスポート）
-├── firebase.json        # Firebase Hosting 設定（public: "out"）
 ├── tsconfig.json        # 初回 next build が自動生成したものをコミット
 ├── .gitignore           # node_modules / .next / out
 ├── apps.json            # アプリ一覧（下記スキーマ）
@@ -85,22 +92,19 @@ showcase/
    export default nextConfig;
    ```
 
-4. `showcase/firebase.json` — Firebase Hosting は `out/`（エクスポート先）を配信:
+4. `showcase/app/layout.tsx` — html/body と最小のインラインスタイル（明るい背景・システムフォント）、サイト名ヘッダー
+5. `showcase/app/page.tsx` — apps.json を import して一覧表示
+6. `showcase/.gitignore` — `node_modules` / `.next` / `out`
+7. `cd showcase && npm install && npx next build` が通り、`out/` が生成されることを確認する（tsconfig.json / next-env.d.ts が自動生成されるので tsconfig.json はコミットする）
+8. Vercel プロジェクトは**接続済み**（冒頭参照）なので、接続作業は不要。万一プロジェクトを作り直す場合のみ:
 
-   ```json
-   { "hosting": { "public": "out", "ignore": ["firebase.json", "**/.*", "**/node_modules/**"] } }
+   ```bash
+   vercel api /v11/projects -X POST --input proj.json
+   # proj.json: {"name":"pv-showcase-{ランダム}","framework":"nextjs","rootDirectory":"showcase",
+   #             "gitRepository":{"type":"github","repo":"KojoBarbie/prd-vault"}}
    ```
 
-5. `showcase/app/layout.tsx` — html/body と最小のインラインスタイル（明るい背景・システムフォント）、サイト名ヘッダー
-6. `showcase/app/page.tsx` — apps.json を import して一覧表示
-7. `showcase/.gitignore` — `node_modules` / `.next` / `out`
-8. `cd showcase && npm install && npx next build` が通り、`out/` が生成されることを確認する（tsconfig.json / next-env.d.ts が自動生成されるので tsconfig.json はコミットする）
-9. **Firebase Hosting の接続は1回だけ人間の作業**。Slack にチェックリストで依頼する。
-   複数サイト管理を避けるため、**prd-vault 専用の Firebase プロジェクトを1つ作り、その
-   デフォルト Hosting サイトを使う**（プロジェクト ID 自体を推測されにくくすれば公開 URL も隠れる）:
-   - [ ] `firebase projects:create pv-showcase-{ランダム}`（例: `pv-showcase-a1b2c3`。→ 公開 URL は `https://pv-showcase-a1b2c3.web.app`）
-   - [ ] `cd showcase && npm run build && firebase deploy --only hosting --project pv-showcase-{ランダム}`
-   - [ ] 確定した `https://pv-showcase-{ランダム}.web.app` を控える（以後の app-idea-hunt 通知が参照する）
+   作成後、`ssoProtection` が `{"deploymentType":"all_except_custom_domains"}`（= Vercel Authentication + Standard Protection）になっていることを確認する
 
 ## 運用ルール
 

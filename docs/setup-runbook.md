@@ -32,7 +32,8 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 | Claude Code CLI | 全ジョブの実行本体（launchd が `$CLAUDE_BIN` を参照） | `claude --version` |
 | Xcode + XcodeGen | app-kickoff のプロジェクト生成・ビルド確認 | `xcodegen --version` |
 | Node.js | showcase（Next.js）・LP（Vite）のビルド | `node --version` |
-| Firebase CLI（`firebase login` 済み） | kickoff の Firebase プロジェクト作成 + LP / showcase の Hosting デプロイ | `firebase projects:list` |
+| Firebase CLI（`firebase login` 済み） | kickoff の Firebase プロジェクト作成 + LP の Hosting デプロイ | `firebase projects:list` |
+| Vercel CLI（`vercel login` 済み） | showcase の Vercel プロジェクト操作（通常は git 連携で自動デプロイされるので不要） | `vercel whoami` |
 | ジョブ実行環境の `.venv`（pyjwt / cryptography / requests） | ASC API（asc_cloud.py） | `$APP_FACTORY_HOME/.venv/bin/python3 -c "import jwt"` |
 | `fvm`（Flutter アプリを対象にする場合のみ） | Flutter 系の監査・テスト | `fvm --version` |
 
@@ -57,7 +58,7 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 
 ## 3. 初回セットアップ チェックリスト（1回だけ）
 
-上から順に。所要 30分程度（showcase の Firebase Hosting 接続含む）。
+上から順に。所要 30分程度。
 
 - [ ] 1. プラグイン更新: `/plugin marketplace update kojobarbie-tools` → `/plugin install app-factory@kojobarbie-tools`
 - [ ] 2. **ホームスキルの削除**（プラグイン版と重複すると自動トリガーが競合する）:
@@ -70,9 +71,9 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 - [ ] 5. 定期実行の配備: `plugins/app-factory/cron/install.sh`（まず `--dry-run` で確認推奨）
 - [ ] 6. **portfolio-review を1回対話実行**して portfolio.yml のブートストラップ内容
   （アプリ一覧・ステージ推定）を確認: `cd "$APP_FACTORY_HOME" && claude "app-factory:portfolio-review を実行して"`
-- [ ] 7. **showcase の Firebase Hosting 接続**: 初回の app-idea-hunt 実行後、prd-vault 専用の
-  Firebase プロジェクトを作成（`firebase projects:create pv-showcase-{ランダム}`）し
-  `cd showcase && npm run build && firebase deploy --only hosting`（プロジェクト ID を推測されにくく）
+- [ ] 7. **showcase の Vercel 接続**: 済み（`pv-showcase-12ced869`。prd-vault に接続済みで
+  PR ごとにプレビューが自動デプロイされる）。作り直す場合の手順は
+  [showcase-spec.md](../plugins/app-factory/skills/app-idea-hunt/references/showcase-spec.md) を参照
 - [ ] 8. 1〜2週様子を見て問題なければ:
   - [ ] auto-merge 解禁: `touch "$APP_FACTORY_HOME"/data/factory_automerge_enabled`
   - [ ] 旧ジョブの置き換え: `install.sh --migrate`（feature-hunt 一括・アプリ別 audit 3本を無効化）
