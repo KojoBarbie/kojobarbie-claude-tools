@@ -32,6 +32,9 @@ factory-build は「**どの issue をやるかの選定から auto-merge まで
    - PR の CI チェックが全て green（`gh pr checks` で確認。チェックが1つも無いリポジトリでは
      ローカルテスト green を代用条件とする）
    - セルフレビューで severity「高」の指摘がゼロ
+   - **UI 変更を含む場合、ビジュアル回帰レビューが実施済みで、そこに「高」の指摘がゼロ**
+     （＝ コンセプトシート/モックからの明確な逸脱、空状態の未実装などが無いこと）。
+     **画面を確認できなかった PR（ビジュアル未確認）は auto-merge しない** — 人間の目に通す
    - 差分が 600 行未満（`gh pr diff --name-only` と diffstat で判定）
    - **センシティブ領域を触っていない**: 課金（StoreKit / RevenueCat / Product ID）、
      権限（Info.plist の Usage Description / entitlements）、データ移行（.xcdatamodel /
@@ -168,10 +171,17 @@ cd "$WT" && git switch -c factory/<type>-<short-desc>
    （2回目なら `factory-blocked`）
 4. push して PR 作成。本文に実装計画 + `Closes #<N>` + 冒頭に
    `🤖 factory-build による自動実装` を明記
-5. **セルフレビュー**: ship-issue と同じくレビュー専任サブエージェントを起動し、
+5. **ビジュアル回帰レビュー**（差分に UI ファイルを含む場合のみ）: ship-issue のステップ4.5 と同じく
+   `dev-workflow-tools:ship-issue` の `references/visual-review.md` に従い、**実際に画面を撮って見る**。
+   所見を `🤖 ビジュアルレビュー:` コメントとして PR に投稿する。
+   撮れなかった場合は「ビジュアル未確認」と理由を必ず書く（黙って飛ばさない）。
+   スクリーンショットは `$APP_FACTORY_HOME/screenshots/{アプリ名}/{PR番号}/` に保存し、パスを報告に含める
+   （リポジトリにはコミットしない）
+6. **セルフレビュー**: ship-issue と同じくレビュー専任サブエージェントを起動し、
    `ship-issue/references/review-criteria.md` の観点で `pr-batch-review` により
    インラインコメントを投稿させる
-6. **修正の1往復**: 指摘に対応（コメントごとに修正コミット + 返信）。往復は1回で打ち切り
+7. **修正の1往復**: 指摘に対応（コメントごとに修正コミット + 返信）。往復は1回で打ち切り。
+   ビジュアルレビューの指摘もこの往復に合流させる
 
 ## ステップ 3: auto-merge 判定
 
