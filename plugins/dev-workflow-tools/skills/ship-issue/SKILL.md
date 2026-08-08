@@ -1,6 +1,6 @@
 ---
 name: ship-issue
-allowed-tools: Read, Edit, Write, Glob, Grep, Agent, TodoWrite, EnterPlanMode, ExitPlanMode, Skill(pr-batch-review), Skill(pr-review-unresolved), Skill(pr-comment-reply), Bash(git:*), Bash(gh:*), Bash(*/skills/pr-batch-review/scripts/submit_batch_review.sh:*), Bash(*/skills/pr-review-unresolved/scripts/get_unresolved_comments.sh:*), Bash(*/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh:*)
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, TodoWrite, EnterPlanMode, ExitPlanMode, Skill(pr-batch-review), Skill(pr-review-unresolved), Skill(pr-comment-reply), Skill(app-design-craft), Bash(git:*), Bash(gh:*), Bash(xcodebuild:*), Bash(xcrun:*), Bash(*/skills/pr-batch-review/scripts/submit_batch_review.sh:*), Bash(*/skills/pr-review-unresolved/scripts/get_unresolved_comments.sh:*), Bash(*/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh:*)
 description: GitHub issue 番号を1つ受け取り、要件読取 → プランモードでの計画承認 → 実装+テスト → PR作成 → サブエージェントによるレビュー(PRインラインコメント) → 修正/返信の1往復 → 停止、までを人手を最小化して自走させる実装オーケストレーター。ユーザーが「issue #42 を実装して」「この issue をやって」「issue から実装して PR まで出して」「ship-issue 42」のように、既存の GitHub issue を起点にコードを書いてレビューまで一気に進めてほしいと言ったら積極的に使う。要件がまだ曖昧でこれから issue を作る段階（feature-planning の領域）ではなく、すでに issue として実装内容が固まっていて、それを実装→PR→セルフレビュー→修正まで回したい局面で力を発揮する。
 ---
 
@@ -138,6 +138,25 @@ EOF
 - PR 本文に **`Closes #<N>`** を入れて issue と紐付ける（親の子を実装した場合も、その子番号を Closes する）。
 - 作成された **PR 番号を返り値の URL から控える**（以降のステップで使う）。
 
+### ステップ 4.5: ビジュアル回帰レビュー（UI 変更を含む場合のみ）
+
+`gh pr diff <pr> --name-only` で **UI ファイル**（`*View*.swift` / `*.tsx` / `*.dart` /
+スタイル定義・アセット等）が含まれるかを見る。含まれるなら、**実際に画面を撮って見る**。
+
+手順は **`references/visual-review.md` に従う**。要点だけ:
+
+1. 画面を撮る（XCUITest の巡回テストがあればそれ、無ければ起動直後の1枚）。
+   撮れなければ「ビジュアル未確認」と理由を PR に書く — **黙って飛ばさない**
+2. 画像を **Read ツールで実際に見て**、`app-design-craft` の9レンズで点検する。
+   突き合わせ先は ①`docs/design-concept.html` ②紙芝居モック（showcase）③状態の網羅
+   ④design-vault の同種画面
+3. 所見を `🤖 ビジュアルレビュー:` で始まるコメントとして PR に投稿する（指摘は3点まで）
+
+> コードレビューだけでは UI の品質は担保できない。規範に書いてあることと画面に出ているものは別物で、
+> **ここを見ないと、モックをどれだけ良くしても完成品は良くならない。**
+
+UI 変更を含まない PR ではスキップしてよい（スキップした旨も書かなくてよい）。
+
 ### ステップ 5: サブエージェントによるレビュー（PR インラインコメント）
 
 GitHub Actions のレビューには頼らず、**ローカルのサブエージェントにレビューさせ**、結果を PR 上のインラインコメントとして残す。記録が PR に残るので、後で人も追える。
@@ -198,6 +217,7 @@ GitHub Actions のレビューには頼らず、**ローカルのサブエージ
 - PR の URL とタイトル
 - 実装した内容（要点）
 - レビュー指摘と、その対応／非対応（理由つき）
+- **ビジュアルレビューの結果**（UI 変更があった場合）とスクリーンショットの保存先パス
 - 残課題・未確認事項（あれば）
 - 一言：「ローカルでの動作確認をお願いします。OK ならマージしてください」
 
