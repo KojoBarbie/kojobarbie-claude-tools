@@ -1,6 +1,6 @@
 {
   "name": "app-factory",
-  "description": "週次でアプリが生まれ、計測され、有望な芽だけが育つ自動アプリ工場（App Factory）。アプリのライフサイクル全体を担うスキル集：app-idea-hunt（ネタ発掘+JTBD分析+KPI設計+モック/トンマナ生成）→ app-kickoff → xcode-cloud-setup → factory-build（issue自律実装）→ store-release（App Store提出・24h拒否権）→ feature-hunt / growth-advisor（機能・グロース提案）→ quality-release-cycle（品質監査）→ portfolio-review（計測→ステージ判定→週報）。claude-cron 用の定期実行テンプレート同梱。設計: docs/app-factory.md",
+  "description": "週次でアプリが生まれ、計測され、有望な芽だけが育つ自動アプリ工場（App Factory）。アプリのライフサイクル全体を担うスキル集：app-idea-hunt（ネタ発掘+JTBD分析+KPI設計+トンマナ3案/紙芝居モック生成）→ app-kickoff → xcode-cloud-setup → factory-build（issue自律実装＋ビジュアル回帰レビュー）→ store-release（App Store提出・24h拒否権）→ feature-hunt / growth-advisor（機能・グロース提案）→ quality-release-cycle（品質監査）→ portfolio-review（計測→ステージ判定→週報）。横断で design-vault（Slack経由でスクショを集めてUI/UXの型を帰納する参照庫）がデザイン品質を支える。claude-cron 用の定期実行テンプレート同梱。設計: docs/app-factory.md",
   "author": {
     "name": "KojoBarbie"
   }

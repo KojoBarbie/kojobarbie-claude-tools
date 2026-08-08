@@ -36,7 +36,7 @@ fi
 CRON_DIR="${CRON_DIR:-${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}}"
 CLAUDE_BIN="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 
-SCRIPTS=(run_portfolio_review.sh run_factory_build.sh run_factory_dispatch.sh run_store_release.sh run_factory_reminder.sh)
+SCRIPTS=(run_portfolio_review.sh run_factory_build.sh run_factory_dispatch.sh run_store_release.sh run_factory_reminder.sh run_design_vault.sh)
 LEGACY=(com.claude.feature-hunt.plist com.claude.antiscroll-audit.plist com.claude.tomarigi-audit.plist com.claude.daymarks-audit.plist)
 
 DRY=0
@@ -136,12 +136,15 @@ CAL_REVIEW='    <key>StartCalendarInterval</key>
     <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer></dict>'
 CAL_REMINDER='    <key>StartCalendarInterval</key>
     <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>'
+CAL_DESIGN='    <key>StartCalendarInterval</key>
+    <dict><key>Hour</key><integer>4</integer><key>Minute</key><integer>0</integer></dict>'
 
 gen_plist com.claude.factory-build     run_factory_build.sh     "$CAL_BUILD"
 gen_plist com.claude.factory-dispatch  run_factory_dispatch.sh  "$CAL_DISPATCH"
 gen_plist com.claude.store-release     run_store_release.sh     "$CAL_STORE"
 gen_plist com.claude.portfolio-review  run_portfolio_review.sh  "$CAL_REVIEW"
 gen_plist com.claude.factory-reminder  run_factory_reminder.sh  "$CAL_REMINDER"
+gen_plist com.claude.design-vault      run_design_vault.sh      "$CAL_DESIGN"
 
 if [ "$MIGRATE" -eq 1 ]; then
   echo "== 3/3 旧ジョブを無効化（--migrate）=="
@@ -169,6 +172,11 @@ cat <<NEXT
      APPLE_TEAM_ID=XXXXXXXXXX        # 必須: app-kickoff のプロジェクト生成が使う（公開リポジトリに置かないため）
      SLACK_WEBHOOK_URL_FACTORY=...   # 任意: factory 系通知の専用チャンネル（無ければ SLACK_WEBHOOK_URL に流れる）
      REVENUECAT_API_KEY=...          # 任意: 収益計測を有効化する場合
+     SLACK_DESIGN_CHANNEL_ID=C0XXX   # 任意: design-vault の収集チャンネル。未設定なら日次ジョブは何もしない
+
+   design-vault を使うには、Slack でデザイン収集用チャンネルを作り /invite @<bot名> して、
+   そのチャンネル ID を上記に設定する（Slack App の設定変更は不要 — 既存 bot が必要スコープを保有済み）。
+   以後、スクショをそのチャンネルに投げるだけで毎日 4:00 に取り込み・分析される。
 
 3. factory-build の auto-merge は初期状態で OFF（PR 作成まで）。
    1〜2週様子を見て問題なければ ON にする:
