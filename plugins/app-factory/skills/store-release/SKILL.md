@@ -165,9 +165,20 @@ git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
    - 判定に迷う（材料が取れない・混在で機能追加の有無が曖昧）→ **安全側に倒してマイナー**を上げ、
      判定根拠を release-train issue に `🤖 バージョン判定:` コメントで残す
    - 決めたバージョンとその理由（マイナー↑/パッチ↑ とその根拠）は起票済み issue 本文の「承認のお願い」にも反映する
-3. ASC API でそのビルドの処理状態を確認する（`GET /v1/builds?filter[app]=<asc_app_id>` で
+3. **タグを打つ前に、リポジトリの版数（`MARKETING_VERSION` / Flutter は `pubspec.yaml` の `version`）を
+   決めたバージョンに一致させて main に push する。** タグとバイナリの版数が食い違うと、その列車のビルドは
+   別バージョンとして ASC に上がり提出時に噛み合わない:
+
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/skills/store-release/scripts/bump_marketing_version.sh <repo> X.Y.Z
+   ```
+
+   既に一致していれば何も書き換えずに終わる（冪等）。ステップ6でパッチが1つ先行しているのが通常なので、
+   パッチ上げの列車では既に一致しているはず。差分が出たときだけ
+   `chore(version): MARKETING_VERSION を X.Y.Z に上げる` でコミットして push し、その後にタグを打つ
+4. ASC API でそのビルドの処理状態を確認する（`GET /v1/builds?filter[app]=<asc_app_id>` で
    最新ビルドの `processingState` が `VALID` になっているか）
-4. **処理中・ビルド未出現でも待ち続けない。** issue に `🤖 ビルド待ち（vX.Y.Z）` とコメントして今日は終了し、
+5. **処理中・ビルド未出現でも待ち続けない。** issue に `🤖 ビルド待ち（vX.Y.Z）` とコメントして今日は終了し、
    次回実行で続きから再開する。3日以上ビルドが出現しない場合のみ Slack に異常として通知する
 
 ### 5. 承認チェックとメタデータ投入・提出
@@ -221,13 +232,55 @@ App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で�
 
 - **承認**（`PENDING_DEVELOPER_RELEASE` / `READY_FOR_DISTRIBUTION` / `ACCEPTED`）:
   1. release-train issue に `🤖 審査承認` とコメントして close
-  2. prd-vault の portfolio.yml で該当アプリの stage を `validating` に更新してコミット・push
-  3. Slack に「🎉 <アプリ名> vX.Y.Z が App Store 審査を通過しました」
+  2. **次の開発版へパッチを1つ進める（必須）** — 審査を通ったバージョン文字列は以後 TestFlight に
+     アップロードできなくなる。リポジトリの版数を上げずに放置すると、その後の**全 PR の Xcode Cloud ビルドが
+     `Preparing build for App Store Connect failed` で落ち続ける**（PR ごとの TestFlight 配信が全部止まる）。
+     審査通過を検知したこの場で main の版数をパッチ+1して push する:
+
+     ```bash
+     ${CLAUDE_PLUGIN_ROOT}/skills/store-release/scripts/bump_marketing_version.sh <repo>
+     # → 1.1.2 -> 1.1.3 のように、定義箇所（xcconfig / project.yml / pbxproj / pubspec.yaml）を全部揃えて書き換える
+     ```
+
+     - main を最新にしてから実行し、差分が出たら
+       `chore(version): MARKETING_VERSION を X.Y.Z に上げる` でコミットして **main に直接 push** する
+       （PR は挟まない。挟むとその PR 自身のビルドが落ちて自分でマージを妨げる）
+     - **タグは打たない**。ここで進めるのは開発版の版数だけで、リリースはあくまで次の列車のステップ4が決める
+     - 既に配信済みより先へ進んでいれば何も書き換わらない（冪等）。上げた結果を issue に
+       `🤖 次の開発版を vX.Y.Z に進めました` とコメントして残す
+     - **落ちたままの open PR がある場合は main を取り込ませて再ビルドさせる**:
+       `gh pr list -R <owner/repo> --state open --json number --jq '.[].number' | xargs -n1 gh pr update-branch -R <owner/repo>`
+       （コンフリクトで失敗した PR は issue にコメントで一覧を残し、無人時は手を出さない）
+  3. prd-vault の portfolio.yml で該当アプリの stage を `validating` に更新してコミット・push
+  4. Slack に「🎉 <アプリ名> vX.Y.Z が App Store 審査を通過しました」
 - **リジェクト**（`REJECTED` / `METADATA_REJECTED` / `DEVELOPER_REJECTED`）:
   1. Resolution Center の内容（取得できる範囲）を要約して issue に `🤖` コメント
   2. issue に `app-review-rejected` ラベルを付ける（列車は open のまま）
   3. Slack に **即時** 通知する。対応は人間、または人間からの個別指示で行う（このジョブは自動で再提出しない）
 - **審査中のまま**（`WAITING_FOR_REVIEW` / `IN_REVIEW`）: 何もしない。次回に持ち越す
+
+### 7. 版数の追い越しチェック（列車の有無に関わらず、毎回・全アプリ）
+
+ステップ6の bump は「このジョブが追跡していた列車」しか拾えない。人間が ASC Web から直接提出したり、
+列車を close した後に審査が通ったりすると穴が空き、**そのアプリの PR ビルドが全部落ちたまま気づかれない**
+（Hirune・DayMarks で実際に起きた）。そこで毎回、配信済みアプリ全部について版数を突き合わせる:
+
+1. `portfolio.yml` の `released` が非 null なアプリごとに、ASC の
+   `GET /v1/apps/<asc_app_id>/appStoreVersions?limit=5` から
+   `appVersionState` が `READY_FOR_DISTRIBUTION` / `PENDING_DEVELOPER_RELEASE` の最大版（= 配信済み版）を取る
+2. リポジトリの版数（`bump_marketing_version.sh <repo> --dry-run` の出力左辺）と比べる
+3. **リポジトリの版数 ≤ 配信済み版**なら、配信済み版のパッチ+1 を指定して上げ、main に直接 push する:
+
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/skills/store-release/scripts/bump_marketing_version.sh <repo> <配信済み版のパッチ+1>
+   ```
+
+   併せて open PR に main を取り込ませ（`gh pr update-branch`）、Slack に
+   「🔢 <アプリ名> の開発版を vX.Y.Z に進めました（配信済み vA.B.C と衝突していたため）」と1行だけ通知する
+4. リポジトリの版数が配信済み版より大きければ何もしない（通常はこちら。無通知）
+
+審査提出中（`WAITING_FOR_REVIEW` / `IN_REVIEW`）の版はまだアップロードを塞がないので、この判定には含めない
+（提出中の版とリポジトリの版が一致しているのが正しい状態）。
 
 ---
 
@@ -256,5 +309,12 @@ App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で�
   以前は24時間 veto（オプトアウト＝默っていると出る）だったが、承認を要件（オプトイン）に反転した
 - **初回だけ人間併走**は設計書のロールアウト方針（Phase 4〜5）そのもの。ASC API の提出系は
   アプリ固有の落とし穴（App Privacy 未回答・輸出コンプラ等）が初回に集中するため、2回目以降とリスクが非対称
+- **審査通過の直後にパッチを1つ進める**のは、配信済みバージョン文字列が TestFlight のアップロードを
+  塞ぐため。リリースは「そのアプリの CI を止めるイベント」でもあり、止まるのは PR ビルド全部という
+  広い範囲なのに、症状（`Preparing build for App Store Connect failed`）はリリースと結びつけにくい。
+  だから審査通過を検知したその場で開発版を1つ先に進め、さらにステップ7で毎回 ASC と突き合わせて
+  取りこぼし（人間が ASC Web から提出した経路）も塞ぐ。上げるのはパッチ固定でよい —
+  次の列車のバージョンはステップ4が改めて semver で決め直すので、ここでの値は「配信済みと重ならない
+  開発版」以上の意味を持たせない
 - **「待たない」原則**は、毎日 6:00 に必ず走るジョブだから成立する。ポーリングで claude を占有するより、
   次回実行に持ち越す方がトークンも安全性も安くつく
