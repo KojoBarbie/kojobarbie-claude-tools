@@ -165,7 +165,12 @@ PRDのコア機能を分解し、下記の**必須issueセット**と合わせ�
    受け入れ条件: `-only-testing:{App}UITests/ScreenshotTests` で単独実行できる /
    `xcrun xcresulttool export attachments` で画像が取り出せる /
    画面を追加したときにテストへ1行足すだけで巡回対象を増やせる
-6. **App Store提出準備**（最後）: アイコン・スクショ・審査メタデータ・プライバシー表記・
+   **アイコンだけは提出準備まで待てない**: `AppIcon.appiconset` は枠だけの状態で生成されるので、
+   画像を1枚も置かないと `CFBundleIconName` が Info.plist に入らず、**TestFlight への
+   アップロードが弾かれる**（アーカイブは通るので Xcode Cloud では
+   `Preparing build for App Store Connect failed` としか出ない）。最初の PR が
+   TestFlight に流れる前に、暫定でいいので 1024x1024・アルファ無しの PNG を置く。
+6. **App Store提出準備**（最後）: アイコン差し替え・スクショ・審査メタデータ・プライバシー表記・
    **App Store カテゴリ（メイン/サブ）**・**著作権表記（`<西暦> <著作権者名>`）**
    （メタデータ・カテゴリ・著作権は store-release が `docs/store-metadata/ja/` に生成・投入する）
 
