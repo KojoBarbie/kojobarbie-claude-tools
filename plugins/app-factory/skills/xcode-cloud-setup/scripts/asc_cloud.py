@@ -12,8 +12,10 @@
   status [AppName]                         ciProducts・リポジトリ・ワークフローの一覧
   check-onboarded <AppName>                Xcode Cloudオンボーディング済みなら exit 0、未了なら exit 1
                                            （承認チェックジョブのポーリング用）
-  create-workflows <AppName> [--scheme S] [--project P.xcodeproj]
-                                           PR/タグトリガーのTestFlightワークフロー2本を作成
+  create-workflows <AppName> [--scheme S] [--project P.xcodeproj] [--keep-others]
+                                           PR/タグトリガーのTestFlightワークフロー2本を作成し、
+                                           それ以外のワークフロー（Xcodeが作る 'Default' など）を削除。
+                                           独自名のワークフローを残したいときは --keep-others
 
 依存: pyjwt, cryptography, requests（作者環境ではジョブ実行環境の .venv に導入済み。
   $APP_FACTORY_HOME/.venv/bin/python3 での実行を推奨。無い環境では venv を作って導入する）
@@ -206,12 +208,36 @@ def build_workflow_body(
     }
 
 
-def create_workflows(app_name: str, scheme: str | None, project: str | None, branch: str) -> None:
+MANAGED_WORKFLOWS = ("PR to TestFlight", "Tag to TestFlight")
+
+
+def prune_workflows(product_id: str, keep: tuple) -> None:
+    """管理外のワークフローを削除する.
+
+    Xcodeのオンボーディングは必ず 'Default' を1本作る。これは main への push ごとに
+    走るためPR用ワークフローと二重にビルドが動き、Xcode Cloudの計算時間を無駄に食う。
+    さらにXcodeはスキーム選択を誤ることがあり（ウィジェット拡張のスキームが選ばれて
+    必ず失敗する等）、放置すると赤いビルドが出続ける。作り直しのたびに 'Defaultd' の
+    ような名前違いが増えるのも実際に起きたので、この2本立てに寄せて掃除する。
+    """
+    for w in get_all(f"/v1/ciProducts/{product_id}/workflows"):
+        name = w["attributes"]["name"]
+        if name in keep:
+            continue
+        api("DELETE", f"/v1/ciWorkflows/{w['id']}")
+        print(f"削除: '{name}'（管理外のワークフロー・id={w['id']}）")
+
+
+def create_workflows(
+    app_name: str, scheme: str | None, project: str | None, branch: str, keep_others: bool = False
+) -> None:
     products = find_product(app_name)
     if not products:
         raise SystemExit(
             f"ERROR: ciProduct '{app_name}' が見つかりません。先にXcodeでXcode Cloudのオンボーディング"
-            "（Product > Xcode Cloud > Create Workflow）を1回行ってください。"
+            "（Product > Xcode Cloud > Create Workflow）を1回行ってください。\n"
+            "なお /v1/ciProducts の一覧はオンボーディング直後の製品を数時間返さないことがある。"
+            "Xcodeで作成できているのにこのエラーが出るなら、未オンボーディングと決めつけず時間を置いて再実行すること。"
         )
     product = products[0]
     product_id = product["id"]
@@ -263,6 +289,11 @@ def create_workflows(app_name: str, scheme: str | None, project: str | None, bra
         )
         created = api("POST", "/v1/ciWorkflows", body)
         print(f"OK: '{name}' を作成しました（id={created['data']['id']}）")
+
+    if keep_others:
+        print("--keep-others 指定のため、管理外のワークフローはそのまま残します")
+    else:
+        prune_workflows(product_id, MANAGED_WORKFLOWS)
 
 
 def find_app_by_bundle_id(bundle_id: str):
@@ -347,6 +378,11 @@ def main() -> None:
     p3.add_argument("--scheme")
     p3.add_argument("--project")
     p3.add_argument("--branch", default="main", help="PRの宛先ブランチ（リポジトリのデフォルトブランチ。既定: main）")
+    p3.add_argument(
+        "--keep-others",
+        action="store_true",
+        help="PR/タグの2本以外を消さずに残す（独自名のワークフローを持つ既存アプリに使うとき）",
+    )
 
     p5 = sub.add_parser("setup-beta-group")
     p5.add_argument("bundle_id")
@@ -361,7 +397,7 @@ def main() -> None:
     elif args.cmd == "check-onboarded":
         check_onboarded(args.app_name)
     elif args.cmd == "create-workflows":
-        create_workflows(args.app_name, args.scheme, args.project, args.branch)
+        create_workflows(args.app_name, args.scheme, args.project, args.branch, args.keep_others)
     elif args.cmd == "setup-beta-group":
         emails = [e for e in args.testers.split(",") if e.strip()]
         setup_beta_group(args.bundle_id, args.group_name, emails)
