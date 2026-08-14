@@ -22,6 +22,10 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        # 宣言しておかないと、ビルドを上げるたびに App Store Connect で輸出規制の質問に
+        # 手で答えるまで TestFlight に配信されない。ここで作るアプリは通信が HTTPS だけで
+        # 独自暗号を積まないので NO。積むアプリを作るときはこの行を消して質問に答える。
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         TARGETED_DEVICE_FAMILY: 1
         CURRENT_PROJECT_VERSION: 1
         # 初回リリースは 1.0.0。"1.0" だとパッチ位置が無く、リリース後のパッチ上げが初回から歪む
