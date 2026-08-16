@@ -26,7 +26,7 @@ description: "既存アプリ（swift/flutter配下）の新機能を週次で�
 | アプリごとの設定 | `<アプリ>/.claude/feature-hunt.yml`（オンボーディングで生成） |
 | 製品コンテキスト | `<アプリ>/.claude/product-context.md`（同上。**毎回必読**） |
 | 提案・却下の履歴 | `<アプリ>/.claude/feature-hunt-log.md` |
-| 週次実行の対象リスト | `$APP_FACTORY_HOME/feature_hunt_apps.txt`（`APP_FACTORY_HOME` のデフォルト: `~/dev/others/claude-cron`） |
+| 週次実行の対象リスト | `$APP_FACTORY_HOME/feature_hunt_apps.txt`（`APP_FACTORY_HOME` のデフォルト: `~/dev/business/claude-cron`） |
 | 環境変数 | `$APP_FACTORY_HOME/.env`（`set -a && source && set +a` で読み込む） |
 | Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$WEBHOOK"`。webhookは `SLACK_WEBHOOK_URL_FEATURE` があればそれ、なければ `SLACK_WEBHOOK_URL`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
 | 競合検索 | `bash {skill_dir}/scripts/jp_appstore_search.sh "検索語" [limit] [country]` |

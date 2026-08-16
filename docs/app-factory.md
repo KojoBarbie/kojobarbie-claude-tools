@@ -201,8 +201,8 @@ prd-vault に置く理由: PRD・却下履歴・config.yml（スコアリング�
 
 ```
 # factory_schedule.tsv の例（portfolio-review が毎週金曜に翌週分を生成。手編集可。パスは portfolio.yml の path）
-2026-07-20	ExampleFlutterApp	~/dev/flutter/ExampleFlutterApp	audit
-2026-07-21	ExampleApp	~/dev/swift/ExampleApp	feature-hunt
+2026-07-20	ExampleFlutterApp	~/dev/business/ExampleFlutterApp	audit
+2026-07-21	ExampleApp	~/dev/business/ExampleApp	feature-hunt
 ```
 
 これにより既存の audit plist 3本と feature-hunt の全アプリ直列実行は廃止でき、
@@ -365,7 +365,7 @@ quality-release-cycle は dev-workflow-tools から移動）。強化はスキ�
 
 リポジトリの外に残るもの:
 
-- ジョブ実行環境 `$APP_FACTORY_HOME`（デフォルト: `~/dev/others/claude-cron`）:
+- ジョブ実行環境 `$APP_FACTORY_HOME`（デフォルト: `~/dev/business/claude-cron`）:
   .env・logs・data・launchd 実体。`cron/install.sh` が配備し、移行手順は `cron/README.md`
   （ホームスキルの削除・run_prd_approval_check.sh の asc_cloud.py パス修正を含む）
 - `prd-vault`（private）: PRD・portfolio.yml（portfolio-review が自動生成）・

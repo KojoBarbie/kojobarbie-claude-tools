@@ -8,7 +8,7 @@
 （既存の SLACK_BOT_TOKEN が全て保有済み。bot をチャンネルに招待するだけでよい）
 
 使い方:
-    python3 fetch_slack_images.py --vault ~/dev/prd-vault/design-vault
+    python3 fetch_slack_images.py --vault ~/dev/business/prd-vault/design-vault
     python3 fetch_slack_images.py --vault ... --channel C0123ABCD --dry-run
 """
 

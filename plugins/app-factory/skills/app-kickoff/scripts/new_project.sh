@@ -2,14 +2,14 @@
 # 新規iOSアプリプロジェクトの雛形を生成する（XcodeGenベース）
 # Usage: new_project.sh <AppName> [dest_dir]
 #   AppName: PascalCaseの英語名（例: SleepStreak）。structやターゲット名に使うため英数字のみ
-#   dest_dir: 省略時は $APPS_DIR/<AppName>（APPS_DIR のデフォルトは ~/dev/swift）
+#   dest_dir: 省略時は $APPS_DIR/<AppName>（APPS_DIR のデフォルトは ~/dev/business）
 # 環境設定は ~/.config/app-factory/config.env から読む（APPS_DIR / BUNDLE_ID_PREFIX）
 set -euo pipefail
 
 CONFIG_FILE="$HOME/.config/app-factory/config.env"
 # shellcheck disable=SC1090
 [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
-APPS_DIR="${APPS_DIR:-$HOME/dev/swift}"
+APPS_DIR="${APPS_DIR:-$HOME/dev/business}"
 BUNDLE_ID_PREFIX="${BUNDLE_ID_PREFIX:-com.kojobarbie}"
 
 APP_NAME="${1:?アプリ名（PascalCase英数字）を指定してください}"
@@ -34,7 +34,7 @@ mkdir -p "$DEST/$APP_NAME" "$DEST/${APP_NAME}Tests" "$DEST/docs"
 # Apple Developer Team ID は公開リポジトリに置かないため環境変数から注入する
 # （$APP_FACTORY_HOME/.env に APPLE_TEAM_ID=XXXXXXXXXX を定義しておく）
 if [ -z "${APPLE_TEAM_ID:-}" ]; then
-  echo "ERROR: APPLE_TEAM_ID が未設定です。\$APP_FACTORY_HOME/.env（デフォルト: ~/dev/others/claude-cron/.env）に追加してください" >&2
+  echo "ERROR: APPLE_TEAM_ID が未設定です。\$APP_FACTORY_HOME/.env（デフォルト: ~/dev/business/claude-cron/.env）に追加してください" >&2
   exit 1
 fi
 sed -e "s/__APP_NAME__/$APP_NAME/g" -e "s/__BUNDLE_SLUG__/$BUNDLE_SLUG/g" \

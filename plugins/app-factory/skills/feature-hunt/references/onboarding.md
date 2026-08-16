@@ -4,7 +4,7 @@
 
 1. `<アプリ>/.claude/feature-hunt.yml`（設定）
 2. `<アプリ>/.claude/product-context.md`（製品コンテキスト）
-3. `$APP_FACTORY_HOME/feature_hunt_apps.txt`（`~/.config/app-factory/config.env` で定義。デフォルト: `~/dev/others/claude-cron`）への1行追記（週次実行への登録）
+3. `$APP_FACTORY_HOME/feature_hunt_apps.txt`（`~/.config/app-factory/config.env` で定義。デフォルト: `~/dev/business/claude-cron`）への1行追記（週次実行への登録）
 
 ## 手順
 

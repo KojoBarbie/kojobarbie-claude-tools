@@ -2,7 +2,7 @@
 """App Store Connect API — Bundle ID登録とXcode Cloudワークフロー作成.
 
 環境変数（$APP_FACTORY_HOME/.env を source してから実行。APP_FACTORY_HOME は
-  ~/.config/app-factory/config.env で定義、デフォルト ~/dev/others/claude-cron）:
+  ~/.config/app-factory/config.env で定義、デフォルト ~/dev/business/claude-cron）:
   APP_STORE_KEY_ID      — API Key ID
   APP_STORE_ISSUER_ID   — Issuer ID
   APP_STORE_P8_KEY      — .p8 秘密鍵の内容（改行含む文字列）

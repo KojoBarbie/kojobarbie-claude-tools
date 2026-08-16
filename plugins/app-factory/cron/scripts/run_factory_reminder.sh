@@ -11,8 +11,8 @@ set -euo pipefail
 
 CONFIG_FILE="$HOME/.config/app-factory/config.env"
 [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
-PROJECT_DIR="${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}"
-PRD_VAULT="${PRD_VAULT_DIR:-$HOME/dev/prd-vault}"
+PROJECT_DIR="${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}"
+PRD_VAULT="${PRD_VAULT_DIR:-$HOME/dev/business/prd-vault}"
 OWNER="${GITHUB_OWNER:-KojoBarbie}"
 APPS_FILE="$PROJECT_DIR/data/factory_apps.tsv"
 LOG_FILE="$PROJECT_DIR/logs/factory_reminder.log"

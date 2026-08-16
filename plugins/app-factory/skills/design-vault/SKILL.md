@@ -15,11 +15,11 @@ description: "Slack のデザイン収集チャンネルに投げられたアプ
 ## 前提
 
 **最初に `~/.config/app-factory/config.env` を読み込む**（`[ -f ~/.config/app-factory/config.env ] && . ~/.config/app-factory/config.env`）。
-続けて `$APP_FACTORY_HOME/.env`（デフォルト `~/dev/others/claude-cron/.env`）を `set -a && . ... && set +a` で読む。
+続けて `$APP_FACTORY_HOME/.env`（デフォルト `~/dev/business/claude-cron/.env`）を `set -a && . ... && set +a` で読む。
 
 | リソース | 値 |
 |---|---|
-| vault | `$PRD_VAULT_DIR/design-vault`（デフォルト `~/dev/prd-vault/design-vault`） |
+| vault | `$PRD_VAULT_DIR/design-vault`（デフォルト `~/dev/business/prd-vault/design-vault`） |
 | Slack チャンネルID | `$SLACK_DESIGN_CHANNEL_ID`（`.env` に追記。未設定なら後述の初回セットアップ） |
 | Slack Bot token | `$SLACK_BOT_TOKEN`（既存。`channels:history` / `files:read` を保有済み） |
 | 収集スクリプト | `python3 ${CLAUDE_PLUGIN_ROOT}/skills/design-vault/scripts/fetch_slack_images.py` |

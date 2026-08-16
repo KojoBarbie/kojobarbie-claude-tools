@@ -50,7 +50,7 @@ apps:
   # （いずれも ~/.config/app-factory/config.env の値）になる
   - name: ExampleApp
     repo: your-github-owner/ExampleApp   # 例: $GITHUB_OWNER/ExampleApp
-    path: ~/dev/swift/ExampleApp         # 例: $APPS_DIR/ExampleApp
+    path: ~/dev/business/ExampleApp         # 例: $APPS_DIR/ExampleApp
     prd: prd/example-app.md          # prd-vault 内の相対パス
     stage: building                  # building | review | validating | growing | maintain | sunset
     stage_since: 2026-07-01

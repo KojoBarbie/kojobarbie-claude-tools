@@ -13,11 +13,11 @@ Goサイン（prd-vaultのPRマージ）が出たPRDを、**スマホからそ�
 
 | リソース | パス |
 |---|---|
-| PRDリポジトリ | `$PRD_VAULT_DIR`（デフォルト: `~/dev/prd-vault`。GitHub: `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、デフォルトブランチ `main`） |
-| プロジェクト配置先 | `$APPS_DIR/{AppName}/`（デフォルト: `~/dev/swift`） |
+| PRDリポジトリ | `$PRD_VAULT_DIR`（デフォルト: `~/dev/business/prd-vault`。GitHub: `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、デフォルトブランチ `main`） |
+| プロジェクト配置先 | `$APPS_DIR/{AppName}/`（デフォルト: `~/dev/business`） |
 | 雛形生成 | `bash {skill_dir}/scripts/new_project.sh <AppName>`（XcodeGen使用。`APPLE_TEAM_ID`・`BUNDLE_ID_PREFIX` を環境変数から注入） |
 | 規約・構成のお手本 | `$APPS_DIR/Hirune/`（CLAUDE.md・docs/・.claude/skills の構成が最新の標準。作者環境の前提 — 無い環境ではお手本参照を省略し、本スキル記載の構成要件だけで書き起こす） |
-| Slack webhook / ASC APIキー | `$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/others/claude-cron/.env`。`SLACK_WEBHOOK_URL_PRD`, `APP_STORE_*`） |
+| Slack webhook / ASC APIキー | `$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/business/claude-cron/.env`。`SLACK_WEBHOOK_URL_PRD`, `APP_STORE_*`） |
 | Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
 
 ## Step 1: PRDの特定と熟読
