@@ -14,11 +14,11 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 
 | 変数 | 意味 | デフォルト |
 |---|---|---|
-| `APP_FACTORY_HOME` | ジョブ実行環境。`.env`・`data/`・`logs/` の置き場所 | `$HOME/dev/others/claude-cron` |
-| `PRD_VAULT_DIR` | PRD・portfolio.yml・showcase を置くリポジトリ（private 推奨） | `$HOME/dev/prd-vault` |
+| `APP_FACTORY_HOME` | ジョブ実行環境。`.env`・`data/`・`logs/` の置き場所 | `$HOME/dev/business/claude-cron` |
+| `PRD_VAULT_DIR` | PRD・portfolio.yml・showcase を置くリポジトリ（private 推奨） | `$HOME/dev/business/prd-vault` |
 | `GITHUB_OWNER` | アプリリポジトリの GitHub owner | `KojoBarbie` |
 | `BUNDLE_ID_PREFIX` | 新規アプリの Bundle ID プレフィックス | `com.kojobarbie` |
-| `APPS_DIR` | 新規アプリ（Xcode プロジェクト）の生成先 | `$HOME/dev/swift` |
+| `APPS_DIR` | 新規アプリ（Xcode プロジェクト）の生成先 | `$HOME/dev/business` |
 | `CLAUDE_BIN` | claude CLI のパス（launchd から PATH が引けないため明示） | `$HOME/.nodebrew/current/bin/claude` |
 
 以降の本文では `$APP_FACTORY_HOME` 等の変数名で参照する。

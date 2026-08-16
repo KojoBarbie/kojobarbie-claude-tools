@@ -10,8 +10,8 @@ set -euo pipefail
 
 CONFIG_FILE="$HOME/.config/app-factory/config.env"
 [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
-PROJECT_DIR="${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}"
-VAULT="${PRD_VAULT_DIR:-$HOME/dev/prd-vault}/design-vault"
+PROJECT_DIR="${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}"
+VAULT="${PRD_VAULT_DIR:-$HOME/dev/business/prd-vault}/design-vault"
 LOG_FILE="$PROJECT_DIR/logs/design_vault.log"
 CLAUDE="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 

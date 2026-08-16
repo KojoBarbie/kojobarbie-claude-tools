@@ -19,7 +19,7 @@ description: アプリの「美学・プロダクト設計レベル」のビジ�
 
 ### 実例をどこから引くか
 
-1. **`$PRD_VAULT_DIR/design-vault/`（デフォルト `~/dev/prd-vault/design-vault/`）があれば最優先で使う。**
+1. **`$PRD_VAULT_DIR/design-vault/`（デフォルト `~/dev/business/prd-vault/design-vault/`）があれば最優先で使う。**
    `patterns/*.md` は実際のアプリ N 例から帰納した型なので、単一スタジオの解より一般化されている。
    引き方は `app-factory:design-vault` スキルの query モード（「〜なアプリのリファレンスを出して」）。
    **方向性の異なる実例を複数見てから決めること** — 1つの参照だけで設計すると、どのアプリも同じ顔になる。

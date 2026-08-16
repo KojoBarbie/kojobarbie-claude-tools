@@ -12,7 +12,7 @@ description: >
 
 ## 前提
 
-**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/others/claude-cron`、`PRD_VAULT_DIR=~/dev/prd-vault`）。
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/business/claude-cron`、`PRD_VAULT_DIR=~/dev/business/prd-vault`）。
 
 `ship-issue` スキルの弟分。ship-issue が「人が計画を承認して1件やる」のに対し、
 factory-build は「**どの issue をやるかの選定から auto-merge まで無人**」で最大3件回す。

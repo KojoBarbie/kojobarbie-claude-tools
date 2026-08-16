@@ -1,7 +1,7 @@
 # App Factory 定期実行テンプレート
 
 App Factory（docs/app-factory.md）の定期実行をジョブ実行環境（`$APP_FACTORY_HOME`。
-デフォルト: `~/dev/others/claude-cron`）に配備するためのテンプレート一式。`./install.sh` で導入する。
+デフォルト: `~/dev/business/claude-cron`）に配備するためのテンプレート一式。`./install.sh` で導入する。
 
 ## 環境設定（`~/.config/app-factory/config.env`）
 

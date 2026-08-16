@@ -1,6 +1,6 @@
 # design-vault の構造仕様
 
-置き場所は `$PRD_VAULT_DIR/design-vault/`（デフォルト `~/dev/prd-vault/design-vault/`）。
+置き場所は `$PRD_VAULT_DIR/design-vault/`（デフォルト `~/dev/business/prd-vault/design-vault/`）。
 prd-vault は private なので他社アプリのスクリーンショットを置いてよく、
 かつ `showcase/` と同一リポジトリなので **showcase のページから参照画像をそのまま表示できる**。
 

@@ -25,10 +25,10 @@ description: "海外アプリ市場から日本向け個人開発iOSアプリの
 
 | リソース | パス |
 |---|---|
-| PRDリポジトリ | `$PRD_VAULT_DIR`（デフォルト: `~/dev/prd-vault`。GitHub: `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、デフォルトブランチ `main`） |
+| PRDリポジトリ | `$PRD_VAULT_DIR`（デフォルト: `~/dev/business/prd-vault`。GitHub: `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、デフォルトブランチ `main`） |
 | 設定 | prd-vault 内の `config.yml` — 本数・スコア重み・注目カテゴリ・除外条件。**毎回最初に読む** |
 | PRDテンプレート | prd-vault 内の `templates/PRD_TEMPLATE.md` |
-| Slack webhook | `SLACK_WEBHOOK_URL_PRD`（`$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/others/claude-cron/.env`）を `set -a && source && set +a` で読み込む） |
+| Slack webhook | `SLACK_WEBHOOK_URL_PRD`（`$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/business/claude-cron/.env`）を `set -a && source && set +a` で読み込む） |
 | Slack投稿スクリプト | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
 | 競合チェック | `bash {skill_dir}/scripts/jp_appstore_search.sh "検索語" [limit] [country]` |
 

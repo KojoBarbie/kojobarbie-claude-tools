@@ -25,8 +25,8 @@ App Factory サイクルの意思決定を担う週次スキル。役割は4つ:
 
 **最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数は括弧内のデフォルト値を使う）。
 
-- prd-vault: `$PRD_VAULT_DIR`（デフォルト: `~/dev/prd-vault`。リポジトリ `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、状態ファイル `portfolio.yml`）
-- ジョブ実行環境: `$APP_FACTORY_HOME`（デフォルト: `~/dev/others/claude-cron`。`.env`、`data/`、`logs/`。firebase-bigquery / slack-post スキルは作者環境の前提 — 無い環境では該当計測を unmeasured 扱い / curl で直接 POST）
+- prd-vault: `$PRD_VAULT_DIR`（デフォルト: `~/dev/business/prd-vault`。リポジトリ `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、状態ファイル `portfolio.yml`）
+- ジョブ実行環境: `$APP_FACTORY_HOME`（デフォルト: `~/dev/business/claude-cron`。`.env`、`data/`、`logs/`。firebase-bigquery / slack-post スキルは作者環境の前提 — 無い環境では該当計測を unmeasured 扱い / curl で直接 POST）
 - `.env` から読む: `SLACK_WEBHOOK_URL_FACTORY`（無ければ `SLACK_WEBHOOK_URL`）、GA/BigQuery 認証、
   `REVENUECAT_API_KEY`（未設定なら収益は未計測扱い）、`APP_STORE_*`（ASC API）
 
@@ -36,8 +36,8 @@ App Factory サイクルの意思決定を担う週次スキル。役割は4つ:
 
 1. スキーマは `${CLAUDE_PLUGIN_ROOT}/assets/portfolio.yml.template` に従う
 2. アプリの列挙: prd-vault の `prd/`・`shipped/` の PRD frontmatter（開発リポジトリ URL・キックオフ日）、
-   `$APP_FACTORY_HOME/data/feature_hunt_apps.txt`、`$APPS_DIR/`（デフォルト: `~/dev/swift`。作者環境では
-   `~/dev/flutter/` も）の git remote が `$GITHUB_OWNER/` のリポジトリを突き合わせる
+   `$APP_FACTORY_HOME/data/feature_hunt_apps.txt`、`$APPS_DIR/`（デフォルト: `~/dev/business`。
+   Swift / Flutter を問わず全アプリがこの1階層に並ぶ）の git remote が `$GITHUB_OWNER/` のリポジトリを突き合わせる
 3. 初期ステージの推定: MVP issue が open で未リリース → `building`、
    App Store 掲載済み（`asc_cloud.py status` や daily-report の対象）→ リリース日不明なら `validating` とし
    週報で人間に確認を出す。実験・旧作（git 整備が薄い）はポートフォリオに **入れない**
@@ -105,8 +105,8 @@ dispatcher が bash で読むための形式。列: `日付<TAB>アプリ名<TAB
 ```
 # App Factory 割当表（portfolio-review が毎週金曜に生成。手編集可）
 # date	app	path	job   （job: audit | feature-hunt | growth-advisor）
-2026-07-20	ExampleFlutterApp	~/dev/flutter/ExampleFlutterApp	audit
-2026-07-21	ExampleApp	~/dev/swift/ExampleApp	feature-hunt
+2026-07-20	ExampleFlutterApp	~/dev/business/ExampleFlutterApp	audit
+2026-07-21	ExampleApp	~/dev/business/ExampleApp	feature-hunt
 ```
 
 生成ルール:

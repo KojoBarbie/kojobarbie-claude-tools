@@ -33,7 +33,7 @@ else
 fi
 # shellcheck disable=SC1090
 . "$CONFIG_FILE"
-CRON_DIR="${CRON_DIR:-${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}}"
+CRON_DIR="${CRON_DIR:-${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}}"
 CLAUDE_BIN="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 
 SCRIPTS=(run_portfolio_review.sh run_factory_build.sh run_factory_dispatch.sh run_store_release.sh run_factory_reminder.sh run_design_vault.sh)

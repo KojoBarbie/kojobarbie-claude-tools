@@ -7,7 +7,7 @@ description: "App Store Connect APIでXcode CloudのTestFlightワークフロー
 
 ## 前提
 
-**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/others/claude-cron`、`GITHUB_OWNER=KojoBarbie`、`BUNDLE_ID_PREFIX=com.kojobarbie`）。
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/business/claude-cron`、`GITHUB_OWNER=KojoBarbie`、`BUNDLE_ID_PREFIX=com.kojobarbie`）。
 
 App Store Connect API（`$APP_FACTORY_HOME/.env` の `APP_STORE_*` キー）でXcode Cloud関連を自動化する。
 
@@ -22,7 +22,7 @@ App Store Connect API（`$APP_FACTORY_HOME/.env` の `APP_STORE_*` キー）でX
 
 ```bash
 [ -f ~/.config/app-factory/config.env ] && . ~/.config/app-factory/config.env
-set -a && source "${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}/.env" && set +a
+set -a && source "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}/.env" && set +a
 ```
 
 | サブコマンド | 用途 |

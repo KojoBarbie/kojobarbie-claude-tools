@@ -27,7 +27,7 @@ TestFlight 配信（Xcode Cloud）までは自動だが、その先の App Store
 
 ## 前提と認証
 
-**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/others/claude-cron`、`PRD_VAULT_DIR=~/dev/prd-vault`）。
+**最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数はデフォルト値: `APP_FACTORY_HOME=~/dev/business/claude-cron`、`PRD_VAULT_DIR=~/dev/business/prd-vault`）。
 
 ASC API の認証は `$APP_FACTORY_HOME/.env` の環境変数を使う（xcode-cloud-setup スキルと同一）:
 
@@ -42,7 +42,7 @@ JWT 生成（ES256・`aud: appstoreconnect-v1`・有効期限20分・ヘッダ `
 
 ```bash
 [ -f ~/.config/app-factory/config.env ] && . ~/.config/app-factory/config.env
-set -a && source "${APP_FACTORY_HOME:-$HOME/dev/others/claude-cron}/.env" && set +a
+set -a && source "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}/.env" && set +a
 ```
 
 Slack 通知はすべて `$SLACK_WEBHOOK_URL_PRD` に送る。issue へのコメントは必ず `🤖` プレフィックスを付ける
