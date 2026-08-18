@@ -28,10 +28,53 @@ firebase apps:create ios "{AppName}" --bundle-id "${BUNDLE_ID_PREFIX}.{slug}" --
 firebase apps:sdkconfig ios <APP_ID> --project {slug}-app > {AppName}/GoogleService-Info.plist
 ```
 
-- `GoogleService-Info.plist` はアプリリポジトリ（private）にコミットしてよい（クライアント用の公開前提キー）
+- `GoogleService-Info.plist` はアプリリポジトリ（private）にコミットしてよい（クライアント用の公開前提キー）。
+  **`.gitignore` で除外しないこと**。Xcode Cloud はリポジトリを clone してビルドするため、
+  コミットされていないと TestFlight / App Store ビルドに plist が入らず `FirebaseApp.configure()` が走らない。
+  ローカルに置いただけでは Xcode Cloud には届かない
 - SDK 導入・初期化・イベント実装は「計測実装」issue の作業。kickoff はプロジェクト作成と plist 配置まで
-- **人力に残るもの**（計測 issue のチェックリストに含める）: Analytics の BigQuery エクスポート有効化
-  （コンソール操作）、`.env` への `analytics_env_prefix` 追記
+
+### Google Analytics のリンク（API で自動化）
+
+Firebase プロジェクトを作っただけでは Analytics は繋がらず、**イベントは送信先が無いまま捨てられる**。
+GA アカウントは共有のものを1つ使い回す（アカウント ID は `prd-vault/portfolio.yml` の
+`analytics.shared_ga_account_id` を参照。**この公開リポジトリには実 ID を書かない**）。
+
+```bash
+# analyticsAccountId を渡すと、プロジェクトごとに新しいプロパティが自動生成されて紐づく
+curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  -H "x-goog-user-project: {slug}-app" \
+  -d "{\"analyticsAccountId\":\"<portfolio.yml の shared_ga_account_id>\"}" \
+  "https://firebase.googleapis.com/v1beta1/projects/{slug}-app:addGoogleAnalytics"
+```
+
+検証は `GET https://firebase.googleapis.com/v1beta1/projects/{slug}-app/analyticsDetails`。
+`analyticsProperty.id` が返り、`streamMappings` に iOS アプリが載っていれば成功。
+**GA アカウント自体の新規作成は API では不可**（`accounts.provisionAccountTicket` は
+利用規約の同意画面をブラウザで開く必要がある）。だから共有アカウントを使い回す。
+
+### BigQuery エクスポート — **人力に残る**（コンソール操作）
+
+Firebase コンソール → プロジェクト設定 → 統合 → BigQuery → 有効化。
+
+Analytics Admin API v1alpha の `properties.bigQueryLinks.create` で自動化を試みたが、
+**サービスアカウントでは 403 になる**。以下はすべて満たしたうえでの結果なので、権限追加では解決しない:
+
+- GA アカウントロール `predefinedRoles/admin`
+- 対象プロジェクトへの `roles/bigquery.admin` / `roles/browser` / `roles/serviceusage.serviceUsageConsumer`
+  （`serviceusage.services.use` は前2つに含まれないので単独で要る）
+- `bigquerydatatransfer` API 有効
+- 同じ資格情報で `bigQueryLinks.list` / `properties.get` は成功する（＝読めるが作れない）
+
+課金は不要。**Spark（無料）プロジェクトでも日次エクスポートは動く**（実測で確認済み）。
+
+検証は `bq --project_id={slug}-app ls --datasets` に `analytics_<property_id>` が現れるか。
+**初回エクスポートはリンクの翌日**に走るため、当日は空でも異常ではない。
+
+- **人力に残るもの**（計測 issue のチェックリストに含める）: 上記の BigQuery エクスポート有効化、
+  `.env` への `analytics_env_prefix` 追記、portfolio.yml への `ga_property_id` 記録
 
 ## RevenueCat — API で自動化を試みる
 
