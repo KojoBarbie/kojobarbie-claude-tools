@@ -19,7 +19,7 @@ TestFlight 配信（Xcode Cloud）までは自動だが、その先の App Store
 このスキルの価値の中心は規律にある:
 
 1. **待たない** — ビルド処理中・スクショ未着でもジョブは終了し、次回実行で続きから再開する（毎日走るので急がない）
-2. **冪等** — 二重起票・二重タグ・二重提出をしない。GitHub と ASC の現状態を毎回照会してから動く
+2. **冪等** — 二重起票・二重タグ・二重 Release・二重提出をしない。GitHub と ASC の現状態を毎回照会してから動く
 3. **承認ゲート** — App Store への「提出」という外に出る操作は、**人間の明示承認（release-train issue の
    `approved` ラベル or 👍 リアクション）が無い限り実行しない**。默っていても提出されない（＝提出はオプトイン）。
    メタデータ生成・TestFlight 用ビルド確保など提出手前の準備は承認前でも自動で進める
@@ -176,9 +176,29 @@ git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
    既に一致していれば何も書き換えずに終わる（冪等）。ステップ6でパッチが1つ先行しているのが通常なので、
    パッチ上げの列車では既に一致しているはず。差分が出たときだけ
    `chore(version): MARKETING_VERSION を X.Y.Z に上げる` でコミットして push し、その後にタグを打つ
-4. ASC API でそのビルドの処理状態を確認する（`GET /v1/builds?filter[app]=<asc_app_id>` で
+4. **タグを push したら、同じタグで GitHub Release を作る。** タグだけ打って Release を作らないと、
+   GitHub の Releases タブに何も並ばず、後から「いつ何を出したか」を追えない。変更履歴の材料は
+   ステップ2でバージョン判定のために既に集めているので、ここで書き切る:
+
+   ```bash
+   PREV=$(git -C <repo> tag --list 'v*' --sort=-v:refname | sed -n 2p)   # 1つ前のリリースタグ
+   gh release view "vX.Y.Z" -R <owner/repo> >/dev/null 2>&1 || \
+     gh release create "vX.Y.Z" -R <owner/repo> --verify-tag --title "vX.Y.Z" \
+       --notes "$NOTES" --generate-notes --notes-start-tag "$PREV"
+   ```
+
+   - **既に同名 Release があれば作り直さない**（`gh release view` が成功したら何もしない＝冪等）
+   - `$NOTES` には**ユーザー視点の日本語サマリを2〜4行**書く。「何が良くなったか」を書き、issue 番号や
+     リファクタ名だけで済ませない。その下に `--generate-notes` が PR 一覧と Full Changelog を自動で足す
+   - `--notes-start-tag` に `$PREV` を渡す。渡さないと初回コミットからの全 PR が並ぶ
+   - `--verify-tag` を必ず付ける。付けないとタグ push に失敗していた場合に gh が main の HEAD から
+     タグを勝手に作ってしまい、タグとビルドの対応が崩れる
+   - **Flutter アプリ（Tomarigi）では Release の publish 自体が TestFlight 配信のトリガー**
+     （`.github/workflows/release-ios.yaml` の `on: release: published`）。Xcode Cloud 勢はタグ push が
+     トリガーなので Release は履歴目的だけになるが、**どちらも必ず作る**（記録を欠かさない）
+5. ASC API でそのビルドの処理状態を確認する（`GET /v1/builds?filter[app]=<asc_app_id>` で
    最新ビルドの `processingState` が `VALID` になっているか）
-5. **処理中・ビルド未出現でも待ち続けない。** issue に `🤖 ビルド待ち（vX.Y.Z）` とコメントして今日は終了し、
+6. **処理中・ビルド未出現でも待ち続けない。** issue に `🤖 ビルド待ち（vX.Y.Z）` とコメントして今日は終了し、
    次回実行で続きから再開する。3日以上ビルドが出現しない場合のみ Slack に異常として通知する
 
 ### 5. 承認チェックとメタデータ投入・提出
