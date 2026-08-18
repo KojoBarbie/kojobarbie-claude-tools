@@ -208,7 +208,8 @@ cd "$WT" && git switch -c factory/<type>-<short-desc>
    （2回目なら `factory-blocked`）
 4. push して PR 作成。本文は **`dev-workflow-tools:ship-issue` の `references/judge-block.md`
    に従った判断書形式**にする（冒頭に判断ブロック → `## 判断してほしいこと` →
-   実装計画は `<details>` の中 → `</details>` の外に `Closes #<N>`）。
+   `## 何が変わるか` → 実装計画は `<details>` の中 → `</details>` の外に `Closes #<N>`）。
+   **`## 何が変わるか`（2〜4行）を省略しない** — ask だけでは人間は通す判断ができない。
    冒頭の判断ブロックの直前に `🤖 factory-build による自動実装` を明記する。
 
    **外部作業が必要だと分かったら、そこで PR を人間待ちにせず切り分ける**:
