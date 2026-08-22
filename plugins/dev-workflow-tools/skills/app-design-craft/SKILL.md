@@ -28,6 +28,36 @@ description: アプリの「美学・プロダクト設計レベル」のビジ�
    これだけを見て全アプリをモノトーンに寄せない。
 3. design-vault が空で該当も無ければ、下記の原則だけで進める。それは劣化ではない。
 
+## 前提の確認（作業に入る前に一度だけ）
+
+このスキルは単体でも動くが、**動き（レンズ7）の仕様化・実装と、出荷前の合否判定は外部スキルに委譲している**。
+無いまま使うと、レンズ7〜9が毎回「未確認」で終わり、静止画レベルの助言しか出せない。
+
+`ls ~/.claude/skills/ ~/.agents/skills/` で**サイレントに存在を確認する**。
+**欠けていても作業は止めない。** そのレンズに入る手前で一度だけ「入れると精度が上がる」と伝え、
+下のコマンドを出す。毎回勧めない。
+
+| スキル | 無いとどうなるか | 入れ方 |
+|---|---|---|
+| `ios-taste` | ⓪の前段（誰の何を解くのか）が省かれ、方向性が題材から出てこない | `npx skills add pproenca/dot-skills@ios-taste -g -y` |
+| `ios-animation-design` | レンズ7が「動きが足りない」で終わり、仕様に落ちない | `npx skills add existential-birds/beagle@ios-animation-design -g -y` |
+| `ios-animation-implementation` | 仕様がコードにならず、サードパーティのアニメライブラリに流れやすい | `npx skills add existential-birds/beagle@ios-animation-implementation -g -y` |
+| `adversarial-ios-design` | 出荷前の機械的な足切りが無く、本スキルの助言だけで通してしまう | `npx skills add pproenca/dot-skills@adversarial-ios-design -g -y` |
+
+いずれも MIT / Apache-2.0。実行スクリプトを持つのは `ios-taste` の配色計算のみ（Python 標準ライブラリだけを使い、外部通信なし）。
+
+> **同ジャンルの別スキルで代替しない。** 特に `swiftui-microinteractions` は
+> 有料版への宣伝文がスキル本文に埋め込まれており、無人ジョブ（`factory-build` 等）の
+> 出力や PR 本文に混入する。使うならフォークして当該節を削ること。
+
+### スキル以外の前提
+
+| リソース | 無いときの挙動 |
+|---|---|
+| `$PRD_VAULT_DIR/design-vault/` | 実例を引けない。上の「実例をどこから引くか」の 2→3 にフォールバックする |
+| `$PRD_VAULT_DIR/portfolio.yml` | ⓪の「直近2本と方向がかぶっていないか」を機械的に確認できない。**手元のアプリのスクショを2〜3本並べて目視で代替する**（この確認自体は省略しない） |
+| Xcode / iOS シミュレータ | レンズ7〜9を実際に触って確認できず「未確認」止まりになる。`adversarial-ios-design` も動かない |
+
 ## 2つのモード
 
 ユーザーの依頼から、どちらをやるか見極める。両方にまたがることも多い。
