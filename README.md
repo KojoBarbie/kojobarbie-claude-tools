@@ -33,7 +33,7 @@ GitHub issue から PR・セルフレビューまでの開発ワークフロー�
 
 | スキル | 役割 |
 |---|---|
-| **app-design-craft** | アプリの「美学・プロダクト設計レベル」のビジュアルデザイン設計＆レビュー。引き算・余白・一貫性・トンマナで凡庸さを脱した UI を作る/見極める。iOS/SwiftUI 主対象。 |
+| **app-design-craft** | アプリの「美学・プロダクト設計レベル」のビジュアルデザイン設計＆レビュー。引き算・余白・一貫性・トンマナで凡庸さを脱した UI を作る/見極める。iOS/SwiftUI 主対象。**別途インストールが要る外部スキルがある → [前提](#前提)** |
 | **ui-design-fundamentals** | ロジックに基づく UI デザインの基礎原則。スペーシング・UI 部品・アクセシビリティなど数値基準レベルの設計判断（世界観レベルは app-design-craft が担当）。 |
 | **onboarding-advisor** | モバイルアプリのチュートリアル・オンボーディング UI/UX 専門アドバイザー。79 件の日英記事と統計データに基づくレビュー・改善提案・アンチパターン検出。 |
 
@@ -87,6 +87,32 @@ GitHub issue から PR・セルフレビューまでの開発ワークフロー�
 
 - [GitHub CLI (`gh`)](https://cli.github.com/) がインストール済み・認証済み（`gh auth status`）であること
 - `jq` がインストール済みであること（`pr-batch-review` / app-factory の cron スクリプトが使用）
+
+#### `app-design-craft` が前提にする外部スキル
+
+`app-design-craft` は**動きの仕様化・実装と、出荷前の合否判定を外部スキルに委譲している**。
+無くてもスキル自体は動くが、9レンズのうち 7〜9（動き・状態・山場）が毎回「未確認」で終わり、
+静止画レベルの助言しか出せない。**マシンごとに1回**入れておく:
+
+```bash
+npx skills add pproenca/dot-skills@ios-taste -g -y
+npx skills add pproenca/dot-skills@adversarial-ios-design -g -y
+npx skills add existential-birds/beagle@ios-animation-design -g -y
+npx skills add existential-birds/beagle@ios-animation-implementation -g -y
+```
+
+| スキル | 役割 |
+|---|---|
+| `ios-taste` | ピクセルより先に「誰の何を解くのか」を決めさせる。`app-design-craft` の⓪（方向性のコミット）の前段 |
+| `adversarial-ios-design` | 出荷前の PASS/FAIL ゲート。シミュレータのスクショと操作録画から逆算して 56 のHIG由来ルールを判定する |
+| `ios-animation-design` | 動きを仕様に落とす（案を2〜3、Reduce Motion と割り込みまで） |
+| `ios-animation-implementation` | 動きを Apple 純正 API だけでコードにする |
+
+- `npx skills` は [skills.sh](https://skills.sh/) の CLI。上記はいずれも MIT / Apache-2.0 で、
+  実行スクリプトを持つのは `ios-taste` の配色計算のみ（Python 標準ライブラリだけ・外部通信なし）。
+- ⚠️ スキル本文はエージェントのコンテキストにそのまま読み込まれる。**`npx skills update` は中身を無審査で
+  差し替える**ので、更新したら `SKILL.md` の差分を一度目視すること。特に無人ジョブ（`factory-build` 等）を
+  回している環境では、作者の宣伝文や外部URLが混ざったスキルが出力に影響しうる。
 
 ## 日常運用
 
