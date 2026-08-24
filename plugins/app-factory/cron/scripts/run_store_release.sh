@@ -7,6 +7,9 @@
 #   - open な release-train issue がある（承認チェック・提出・審査追跡）
 #   - building アプリで実装系 open issue が 0 件（= MVP 完了、列車の起票候補）
 #   - 水曜日（定期リリース列車の週次フルスキャン）
+#
+# ⚠️ このジョブは通知しない。起きたことは data/events.jsonl に落ちるので、
+#    誰にどう知らせるかは利用者の受け手が決める（docs/events.md）。
 
 set -euo pipefail
 
@@ -18,6 +21,11 @@ LOG_FILE="$PROJECT_DIR/logs/store_release.log"
 CLAUDE="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 GH="/opt/homebrew/bin/gh"
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+. "$HERE/lib/events.sh"
+EVENT_JOB="store-release"
+
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"; }
 
 set -a
@@ -25,9 +33,12 @@ source "$PROJECT_DIR/.env"
 set +a
 
 log "=== Starting store release check ==="
+emit_event kind=job_started severity=info
 
 if [ ! -s "$APPS_FILE" ]; then
   log "factory_apps.tsv が無い/空。portfolio-review が未実行のためスキップ"
+  emit_event kind=job_skipped severity=info \
+    title="factory_apps.tsv が無い/空のためスキップ（portfolio-review が未実行）" reason=no_apps_file
   exit 0
 fi
 
@@ -66,6 +77,8 @@ fi
 
 if [ "$NEED" -eq 0 ]; then
   log "本日は用なし。claude を起動せず終了"
+  emit_event kind=job_skipped severity=info \
+    title="本日は対象なし（列車も提出候補も無し）" reason=nothing_to_do
   exit 0
 fi
 
@@ -83,14 +96,18 @@ app-factory:store-release スキルを最初から最後まで実行してくだ
 - バージョンは semver ルールで決めること（機能追加ありならマイナー↑ / バグ修正のみならパッチ↑ /
   メジャーは人間指示か major ラベルのときだけ）
 - 提出・タグ作成などの操作は必ず冪等に（ASC と GitHub の現状態を照会してから）
-- そのアプリで ASC API による提出が初回の場合は、承認済みでも提出直前で止めて人間併走の案内を Slack に出すこと
+- そのアプリで ASC API による提出が初回の場合は、承認済みでも提出直前で止め、
+  人間併走が要る旨を kind=human_task / severity=action のイベントとして出すこと
+- **通知は一切しないこと。Slack にも他のどこにも投稿しない。**
+  起きたことは scripts/lib/events.sh の emit_event で data/events.jsonl に追記する
 - 無人実行なのでユーザーへの質問はしないこと
 PROMPT
 then
   log "ERROR: claude 実行が非ゼロ終了"
-  curl -s -X POST -H 'Content-type: application/json' \
-    --data '{"text":":warning: store-release の実行が失敗しました。logs/store_release.log を確認してください。"}' \
-    "${SLACK_WEBHOOK_URL_PRD:-$SLACK_WEBHOOK_URL}" > /dev/null || true
+  emit_event kind=job_failed severity=error \
+    title="store-release の実行が失敗しました。logs/store_release.log を確認してください" log="$LOG_FILE"
+  exit 0
 fi
 
+emit_event kind=job_finished severity=info
 log "=== Finished ==="

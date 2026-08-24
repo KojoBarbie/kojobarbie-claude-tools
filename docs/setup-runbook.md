@@ -43,12 +43,8 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 
 | キー | 用途 | 必須 |
 |---|---|---|
-| `SLACK_WEBHOOK_URL` | デフォルト通知チャンネル | ✅ |
-| `SLACK_WEBHOOK_URL_PRD` | PRD・キックオフ・リリース系通知 | ✅ |
 | `APP_STORE_KEY_ID` / `APP_STORE_ISSUER_ID` / `APP_STORE_P8_KEY` | ASC API（Bundle ID 登録・Xcode Cloud・ストア提出）。鍵は .p8 の中身を literal `\n` で格納 | ✅ |
 | `APPLE_TEAM_ID` | app-kickoff のプロジェクト生成（テンプレートから Team ID を排除したため） | ✅ |
-| `SLACK_WEBHOOK_URL_FEATURE` | 機能提案系の専用チャンネル | 任意（無ければデフォルトへ） |
-| `SLACK_WEBHOOK_URL_FACTORY` | factory-build / portfolio-review 系の専用チャンネル | 任意（同上） |
 | `SUPPORT_EMAIL` | 各アプリの設定画面と LP の問い合わせ先 | ✅ |
 | `STORE_COPYRIGHT_HOLDER` | ストア提出の著作権表記に使う著作権者名（例: `KojoBarbie`）。store-release が `<西暦> <この値>` を `copyright.txt` に生成 | 任意（無ければ `GITHUB_OWNER` を使う） |
 | `ADMOB_PUBLISHER_ID` | LP の app-ads.txt 生成（`pub-…`。app-ads.txt 上で公開される値） | ✅（広告収益化するなら） |
@@ -86,8 +82,8 @@ App Factory の環境依存パスはすべてこのファイルに集約され�
 |---|---|---|
 | 月〜（PRD PR が来たら） | prd-vault の PR をマージ / クローズ / コメント。見るのは「ジョブ分析が信じられるか」「KPI に具体的数値と根拠があるか」「showcase のモック/トンマナ」 | 新規アプリが生まれない（既存は回り続ける） |
 | 随時（提案 issue が来たら） | `feature-proposal` に 👍 / `go` または close | 提案が溜まる（6件超で新規提案は自動休止） |
-| キックオフ直後 | **ASC でアプリレコード作成 + Xcode Cloud 初回オンボーディング + AdMob アプリ追加（計10分）**。Firebase / RevenueCat / LP の Firebase Hosting は自動（失敗時のみフォールバック手順が Slack に届く） | そのアプリのリリース・広告収益化が進まない（3日ごとにリマインド） |
-| リリース前（1回/アプリ） | スクリーンショットを `docs/store-assets/` に置く | 提出が保留される（Slack で1回だけ依頼が来る） |
+| キックオフ直後 | **ASC でアプリレコード作成 + Xcode Cloud 初回オンボーディング + AdMob アプリ追加（計10分）**。Firebase / RevenueCat / LP の Firebase Hosting は自動（失敗時のみフォールバック手順が `human_task` イベントに出る） | そのアプリのリリース・広告収益化が進まない（`pending.json` に出続ける） |
+| リリース前（1回/アプリ） | スクリーンショットを `docs/store-assets/` に置く | 提出が保留される（`human_task` イベントが1回だけ出る） |
 | アプリ初回提出時（1回/アプリ） | store-release が提出直前で止まるので、ASC で内容確認して提出（or「提出して」と指示） | 提出されないまま待機 |
 | 提出承認の通知が来たら | release-train issue の内容（メタデータ・スクショ・著作権・カテゴリ・バージョン）を確認し、よければ `approved` ラベル or 👍。延期は `hold`、やめるなら close | **提出されない**（承認しない限り待機） |
 | 金 | 週報を読む。「要判断」があれば返信 | 保守的側（現状維持）に倒れる |
@@ -105,7 +101,7 @@ PRD レビュー（PR 1本: ジョブ分析・KPI・モック/トンマナ）→
   └ キックオフ後: ASC レコード + Xcode Cloud オンボーディング（5分）
       └ 開発中: なし（factory-build が無人実装。条件外の PR だけレビュー）
               ・修正依頼したい時は PR に普通のコメント（自分の PR には approve/request-changes は不可）
-              ・次の factory-build 実行が拾って1往復で対応 →「💬 返信したよ」が Slack に届く
+              ・次の factory-build 実行が拾って1往復で対応 → `comment_answered` イベントが出る
               ・急ぐなら「ファクトリー回して」で手動起動（定時 5:00/13:00/21:00 を待たない）
           └ リリース前: スクショ配置 + 初回提出の併走（2回目以降は不要）
               └ リリース後: なし（リジェクト時のみ対応）
@@ -123,7 +119,7 @@ PRD レビュー（PR 1本: ジョブ分析・KPI・モック/トンマナ）→
 - **prd-vault の PRD テンプレート更新**: スキルは references/prd-sections.md で自給できるが、
   テンプレート本体への反映は初回実行時に1回だけ提案される
 - **既存の日次分析スキル群との整理**: ジョブ実行環境（`$APP_FACTORY_HOME`。作者環境）には `daily-app-report`（毎日10:30、ストアCVR +
-  オンボーディングファネル + DAU/MAU を Slack 投稿）とその部品 `app-store-analytics` /
+  オンボーディングファネル + DAU/MAU を日次レポート化）とその部品 `app-store-analytics` /
   `firebase-bigquery` が既にある。portfolio-review はこの部品2つを週次で再利用する設計。
   daily-app-report（日次・現状把握用）と週報（週次・意思決定用）は役割が違うので当面併存でよいが、
   対象アプリが増えたら daily 側も portfolio.yml 連動に寄せる
@@ -132,4 +128,4 @@ PRD レビュー（PR 1本: ジョブ分析・KPI・モック/トンマナ）→
   データは既に集まる場所が決まっている（portfolio.yml = prd-vault、token_ledger.tsv と
   dispatch 履歴 = ジョブ実行環境 `$APP_FACTORY_HOME`）ので、実装は「週次ジョブが JSON スナップショットをダッシュボード
   リポジトリにコミット → Next.js 静的エクスポート → Firebase Hosting（Firebase Auth でアクセス保護）」が最小構成。
-  週報（Slack・プッシュ型）とダッシュボード（プル型・時系列）の関係は補完
+  週報（プッシュ型）とダッシュボード（プル型・時系列）の関係は補完

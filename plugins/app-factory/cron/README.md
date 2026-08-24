@@ -18,7 +18,7 @@ App Factory（docs/app-factory.md）の定期実行をジョブ実行環境（`$
 | 8時間ごと 5:00 / 13:00 / 21:00 | factory-build（issue の自律実装） | factory_apps.tsv に building/growing/validating があるときだけ |
 | 平日 3:00 | factory-dispatch（feature-hunt / audit / growth-advisor を1日1リポジトリ） | 割当表に当日スロットがあるときだけ |
 | 毎日 6:00 | store-release（リリース列車・承認ゲート・審査追跡） | review ステージ / open な release-train / MVP 完了 / 水曜、のいずれか |
-| 毎日 12:00 | factory-reminder（人力タスクの滞留リマインド） | 起動しない（bash + gh のみ。滞留があるときだけ Slack に1通） |
+| 毎日 12:00 | factory-reminder（人力タスクの滞留を data/pending.json に集約） | 起動しない（bash + gh + jq のみ） |
 | 金 17:00 | portfolio-review（計測→判定→割当表生成→週報） | 常時（週1） |
 
 監査・提案は深夜に回す。factory-build は滞留解消を優先して 8時間ごと（5:00 / 13:00 / 21:00）に走らせ、

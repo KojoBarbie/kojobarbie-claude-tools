@@ -5,6 +5,9 @@
 # スロットが空の日は claude を起動せず即終了（トークン消費ゼロ）。
 # launchd (com.claude.factory-dispatch) から呼び出される
 
+# ⚠️ このジョブは通知しない。起きたことは data/events.jsonl に落ちるので、
+#    誰にどう知らせるかは利用者の受け手が決める（docs/events.md）。
+
 set -euo pipefail
 
 CONFIG_FILE="$HOME/.config/app-factory/config.env"
@@ -15,6 +18,11 @@ HISTORY_FILE="$PROJECT_DIR/logs/factory_dispatch_history.tsv"
 LOG_FILE="$PROJECT_DIR/logs/factory_dispatch.log"
 CLAUDE="${CLAUDE_BIN:-$HOME/.nodebrew/current/bin/claude}"
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+. "$HERE/lib/events.sh"
+EVENT_JOB="factory-dispatch"
+
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"; }
 
 set -a
@@ -23,9 +31,12 @@ set +a
 
 TODAY=$(date '+%Y-%m-%d')
 log "=== Starting dispatch for $TODAY ==="
+emit_event kind=job_started severity=info
 
 if [ ! -s "$SCHEDULE_FILE" ]; then
   log "割当表なし（portfolio-review 未実行？）。スキップ"
+  emit_event kind=job_skipped severity=info \
+    title="割当表 factory_schedule.tsv が無いためスキップ（portfolio-review が未実行）" reason=no_schedule
   exit 0
 fi
 
@@ -33,6 +44,7 @@ fi
 SLOT=$(awk -F'\t' -v d="$TODAY" '$0 !~ /^#/ && $1 == d { print; exit }' "$SCHEDULE_FILE")
 if [ -z "$SLOT" ]; then
   log "本日のスロットなし。claude を起動せず終了"
+  emit_event kind=job_skipped severity=info title="本日の割当スロットなし" reason=no_slot
   exit 0
 fi
 
@@ -43,6 +55,8 @@ JOB=$(echo "$SLOT" | cut -f4)
 if [ ! -d "$APP_PATH" ]; then
   log "$APP_NAME: パスが存在しない ($APP_PATH)。スキップ"
   echo -e "${TODAY}\t${APP_NAME}\t${JOB}\tpath_missing" >> "$HISTORY_FILE"
+  emit_event kind=job_failed severity=error app="${APP_NAME}" \
+    title="割当先のパスが存在しません: ${APP_PATH}" dispatch_job="${JOB}"
   exit 0
 fi
 
@@ -71,14 +85,17 @@ case "$JOB" in
 
 - これは読み取り専用の使い捨て worktree です。Issue の起票先は $(git -C "$APP_PATH" remote get-url origin | sed -E 's@.*github.com[:/]@@; s@\.git$@@') です
 - 前回監査以降の差分を中心に、新規起票は最大10件の規律を守ること
-- 完了したら結果の要約を Slack（\$SLACK_WEBHOOK_URL_FACTORY、無ければ \$SLACK_WEBHOOK_URL）に投稿すること"
+- **通知は一切しないこと。Slack にも他のどこにも投稿しない。**
+  完了したら scripts/lib/events.sh の emit_event で kind=report のイベントを1件出すこと"
     ;;
   feature-hunt)
     run_claude "$APP_PATH" "/feature-hunt スキルの Run（週次実行）を最初から最後まで実行してください。
 
 - .claude/product-context.md と .claude/feature-hunt-log.md を必ず最初に読むこと
 - 前回提案の承認（go/👍）・却下（close）チェックを忘れずに行うこと
-- 成果物: 最大3件の提案Issue + Slack通知。基準を満たす案がなければ無理に出さず、その旨をSlackに報告すること"
+- 成果物は最大3件の提案 Issue。**通知は一切しないこと（Slack にも他のどこにも投稿しない）。**
+  起票した提案は1件ごとに emit_event で kind=proposal_opened / severity=action のイベントにすること。
+  基準を満たす案がなければ無理に出さず、その旨を kind=job_finished のイベントに書くこと"
     ;;
   growth-advisor)
     run_claude "$APP_PATH" "app-factory:growth-advisor スキルを最初から最後まで実行してください。
@@ -95,9 +112,14 @@ esac
 echo -e "${TODAY}\t${APP_NAME}\t${JOB}\t${STATUS}" >> "$HISTORY_FILE"
 
 if [ "$STATUS" = "error" ]; then
-  curl -s -X POST -H 'Content-type: application/json' \
-    --data "{\"text\":\":warning: factory-dispatch (${APP_NAME} / ${JOB}) が失敗しました。logs/factory_dispatch.log を確認してください。\"}" \
-    "${SLACK_WEBHOOK_URL_FACTORY:-$SLACK_WEBHOOK_URL}" > /dev/null || true
+  emit_event kind=job_failed severity=error app="${APP_NAME}" \
+    title="factory-dispatch (${APP_NAME} / ${JOB}) が失敗しました。logs/factory_dispatch.log を確認してください" \
+    dispatch_job="${JOB}" log="$LOG_FILE"
+fi
+
+if [ "$STATUS" = "ok" ]; then
+  emit_event kind=job_finished severity=info app="${APP_NAME}" \
+    summary="${JOB} を実行しました" dispatch_job="${JOB}"
 fi
 
 log "=== Finished ($STATUS) ==="

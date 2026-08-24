@@ -40,7 +40,7 @@ factory-build は「**どの issue をやるかの選定から auto-merge まで
      権限（Info.plist の Usage Description / entitlements）、データ移行（.xcdatamodel /
      マイグレーションコード）、CI 設定（.github/workflows / ci_scripts）、署名設定。
      1ファイルでも該当したら auto-merge しない
-3. 条件を満たさない PR は **open のまま残して人間に回す**（Slack 通知 + 週報に載る）。
+3. 条件を満たさない PR は **open のまま残して人間に回す**（pending.json と週報に載る）。
    このとき **PR 本文に判断ブロック（`judge:v1`）を必ず入れる**
    （`dev-workflow-tools:ship-issue` の `references/judge-block.md` に従う）。
    判断ブロックの無い PR は時効ジョブ・リマインダー・pr-desk のいずれからも見えず、
@@ -80,8 +80,8 @@ factory-build は「**どの issue をやるかの選定から auto-merge まで
 
 ## ステップ 0: 対象の把握
 
-1. `$PRD_VAULT_DIR/portfolio.yml` を読む（無ければ「portfolio-review を先に実行してください」と
-   ログ・Slack に残して終了）
+1. `$PRD_VAULT_DIR/portfolio.yml` を読む（無ければ「portfolio-review を先に実行してください」を
+   ログと `kind=job_skipped` のイベントに残して終了）
 2. アプリを **stage 優先度順**に並べる: `building` → `growing` → `validating` → それ以外は対象外
 3. 前回の残り物を先に処理する: 各対象リポジトリで自分が過去に作った open PR
    （head ブランチが `factory/` プレフィックス）を確認し、
@@ -114,14 +114,35 @@ factory-build は「**どの issue をやるかの選定から auto-merge まで
    往復は1回で打ち切り（返信への再反応は次回実行に委ねる — 無限ループ防止）。
    往復後に auto-merge 条件を再評価する。**人間のコメントが1件でも残っている PR は、
    全コメント解決（resolved）まで auto-merge しない**（人間の意見が機械条件より優先）。
-   **返信したら必ず Slack に「返信したよ」通知を出す**（下記）:
+
+   **対応したら、返信する前に必ず判断ブロックを書き直す**（`references/judge-block.md` の
+   「ask を書き換えなければならないとき」）。`ask` / `type` / `cost` を実態に合わせ、
+   `asked_at` を本日にする:
+
+   ```bash
+   gh pr view <PR番号> --json body -q .body > /tmp/body.md   # judge:v1 と ask を書き換えて
+   gh pr edit <PR番号> --body-file /tmp/body.md
+   ```
+
+   > ⚠️ **これを飛ばすと「一生進まない PR」ができる。** 実測（2026-08-20）:
+   > 人間の「コンフリしてるので直して！」に対し bot は6時間後に解消して返信したが、
+   > 本文の ask は「コンフリクトしています。作り直させるか、不要なら捨ててください」のまま。
+   > 判断キューには2日間その文面が出続け、人間は「まだ壊れている」と読んで飛ばし続けた。
+   > **直したら ask も直す。** 直した後の ask は
+   > 「コンフリクトを解消しました。差分を見て問題なければマージしてください」のように、
+   > **次に人間がやること**を書く。
+
+   **返信したら必ず `comment_answered` イベントを出す**（下記）:
 
    > ⚠️ 重要（同一名義問題）: bot も人間も同じ GitHub アカウントなので、bot が返信・修正しても
    > **人間には GitHub 通知が飛ばない**。放置すると「返してくれたのか分からない」でループが閉じない。
-   > そのため、人間コメントに対応した PR は **1本ごとに** `SLACK_WEBHOOK_URL_FACTORY`
-   > （無ければ `SLACK_WEBHOOK_URL`）へ次の内容を投稿する:
-   > 「💬 <アプリ名> PR #N のコメントに対応しました（修正 X 件 / 返信 Y 件）→ <PR URL>。
-   > 　内容を確認して、OK なら merge、まだなら PR にコメントを追記してください（次回実行で拾います）」
+   > そのため、人間コメントに対応した PR は **1本ごとに** イベントを1件出す:
+   >
+   > ```bash
+   > emit_event kind=comment_answered severity=action app="<アプリ名>" \
+   >   title="PR #N のコメントに対応しました（修正 X 件 / 返信 Y 件）。内容を確認して、OK なら merge、まだなら PR にコメントを追記してください（次回実行で拾います）" \
+   >   url="<PR URL>" fixed=X replied=Y
+   > ```
 
 ## ステップ 1: issue の選定（最大3件・**同一アプリからは1件まで**）
 
@@ -256,7 +277,7 @@ gh pr diff <PR番号> --name-only               # センシティブ領域の判
   1. **判断ブロックを確定させる**。`type` / `cost` / `risk` を実態に合わせ、
      `ask` を「何をすれば OK か」の1文に書き直す（落ちた理由をそのまま書かない。
      「差分が600行を超えたので確認してください」は依頼として成立していない）。
-     `expires` は本日 + 14日。スクショがあれば `shots` を入れる
+     `expires` は本日 + 14日、`asked_at` は本日。スクショがあれば `shots` を入れる
 
      ```bash
      gh pr view <PR番号> --json body -q .body > /tmp/body.md   # 編集して
@@ -275,16 +296,28 @@ gh pr diff <PR番号> --name-only               # センシティブ領域の判
 
 ## ステップ 4: 報告
 
-**実行のたびに、その回の活動サマリを必ず Slack に1通出す**（`SLACK_WEBHOOK_URL_FACTORY`、
-無ければ `SLACK_WEBHOOK_URL`）。人間が放置していても「今回 factory が何をして・どの PR になったか」を
-毎回追える状態を作るのが目的。**触れた PR は1本残らず URL を添える**（PR 名だけで URL 無しは禁止）。
+**通知はしない。** 起きたことは `$APP_FACTORY_HOME/data/events.jsonl` へイベントとして追記する
+（仕様は `docs/events.md`）。誰にどう知らせるかは利用者の受け手が決めるので、
+このスキルは Slack にも他のどこにも投稿しない。
 
-ヘッダに実行時刻と1行サマリ（例:「🏭 factory-build 07-26 05:00 — 作成2 / マージ1 / コメント対応1」）、
-続けて以下を**該当があるものだけ**、各行に PR URL 付きで:
+```bash
+. "$APP_FACTORY_HOME/scripts/lib/events.sh"
+EVENT_JOB=factory-build
+emit_event kind=pr_opened severity=action app=AntiScroll \
+  title="<判断ブロックの ask をそのまま>" url="<PR URL>" issue=190 judge_type=run cost=5
+```
+
+人間が放置していても「今回 factory が何をして・どの PR になったか」を毎回追える状態を作るのが目的。
+**触れた PR は1本残らず1件のイベントにし、`url` を必ず入れる**（URL 無しは禁止）。
+
+最後に `kind=job_finished` を1件出し、`summary` に1行サマリを入れる
+（例: `summary="作成2 / マージ1 / コメント対応1"`）。
+
+以下を**該当があるものだけ**、1件につき1イベントで:
 
 - **新規作成した PR**: `アプリ名 #issue 1行説明 → <PR URL>`（auto-merge したか / 人間待ちか も1語で添える）
 - **マージした PR**: `アプリ名 #issue → <PR URL>`
-- **人間コメントに対応した PR**（ステップ0 #4 の「返信したよ」）: `アプリ名 #PR 修正X/返信Y → <PR URL>`
+- **人間コメントに対応した PR**（ステップ0 #4 の「返信したよ」）: `kind=comment_answered` / `severity=action`。
   「確認して merge か追記コメントを」。同一名義で GitHub 通知が飛ばないため省略しない
 - **人間に回した PR とその理由**（auto-merge 条件を満たさなかった等）:
   `アプリ名 #PR <判断ブロックの ask をそのまま> （種別/約N分・期限 YYYY-MM-DD）→ <PR URL>`。
@@ -348,7 +381,12 @@ gh pr diff <PR番号> --name-only               # センシティブ領域の判
   書かれていなかった。結果 open 50本・うち19本がコンフリクトで腐るまで放置された（2026-08-17 に棚卸し）。
   判断ブロックは「依頼内容・所要時間・期限」を機械可読な形で必ず添えさせる装置で、
   これがあって初めて時効ジョブ・リマインダー・pr-desk が同じ1つの構造を読める
-- **人間コメントの往復に Slack「返信したよ」通知を必ず添える**のは、この運用では bot も人間も同一
+- **人間コメントに対応したら ask も書き直させる**のは、`ask` が本文に埋め込まれた
+  静的テキストなのに、内容は CI やコンフリクトという動的な事実を指すことが多いため。
+  放っておくと必ずズレ、しかもズレた側（古い ask）だけが人間の目に入る。
+  読み手（reminder / pr-desk）が CI と mergeable を併記するのは**保険**で、
+  ask を正しく保つのは書き手の責任
+- **人間コメントの往復に `comment_answered` イベントを必ず添える**のは、この運用では bot も人間も同一
   GitHub アカウントで、bot の返信・修正コミットに対して人間へ GitHub 通知が飛ばないため。
-  通知が無いと「返してくれたのか分からない」で往復が死ぬ。GitHub 上で内容をやり取りし（監査ログは
-  PR に残る）、「見に来てほしい」合図だけを Slack で出す、という役割分担にしている
+  合図が無いと「返してくれたのか分からない」で往復が死ぬ。GitHub 上で内容をやり取りし（監査ログは
+  PR に残る）、「見に来てほしい」合図だけをイベントに出す、という役割分担にしている

@@ -1,17 +1,17 @@
 ---
 name: app-idea-hunt
-description: "海外アプリ市場から日本向け個人開発iOSアプリのネタを発掘し、競合チェック→スコアリング→PRD作成→prd-vaultへのPR→Slack通知まで一気通貫で実行するパイプライン。Use when: (1) 週次の自動ネタ提案（launchd経由の定期実行）、(2)「アプリのネタを探して」「新しいアプリのアイデアが欲しい」「次に作るアプリを考えて」「PRDを作って」と言われたとき、(3) 海外でヒットしているアプリの日本展開を検討するとき、(4) prd-vaultのPRコメントに応じてPRDを改訂するとき、(5) 特定のネタを指名してPRD化したいとき（prd-vaultの `idea` ラベル issue、「ideas/○○ を PRD にして」「このアイデアをリサーチ・採点して」など）。個人開発アプリのアイデア出し・要件定義に関する依頼なら、スキル名が明示されていなくてもこのスキルを使う。"
+description: "海外アプリ市場から日本向け個人開発iOSアプリのネタを発掘し、競合チェック→スコアリング→PRD作成→prd-vaultへのPRまで一気通貫で実行するパイプライン。Use when: (1) 週次の自動ネタ提案（launchd経由の定期実行）、(2)「アプリのネタを探して」「新しいアプリのアイデアが欲しい」「次に作るアプリを考えて」「PRDを作って」と言われたとき、(3) 海外でヒットしているアプリの日本展開を検討するとき、(4) prd-vaultのPRコメントに応じてPRDを改訂するとき、(5) 特定のネタを指名してPRD化したいとき（prd-vaultの `idea` ラベル issue、「ideas/○○ を PRD にして」「このアイデアをリサーチ・採点して」など）。個人開発アプリのアイデア出し・要件定義に関する依頼なら、スキル名が明示されていなくてもこのスキルを使う。"
 ---
 
 # App Idea Hunt
 
 海外市場のトレンドから「日本の個人開発者が1〜2週間で作れて、確実に収益が上がる」アプリのネタを発掘し、PRD（要件定義書）として `prd-vault` にPR提出するまでを自動で行う。
 
-**このパイプラインの成果物はPRD 1本のPR（トンマナ3案＋触れる紙芝居モック＋PRD 本文の showcase ページ込み）とSlack通知**。ユーザーはPRをマージ（=Go）またはクローズ（=ボツ）するだけでよい（＋任意でトンマナ案を1文字返す）。その体験を壊さないよう、途中でユーザーへの質問はせず、判断はこのスキルの基準に従って自分で下す（例外は指名モードの停止条件だけ — そこでも同期的に聞くのではなく issue にコメントを残して終了する）。
+**このパイプラインの成果物はPRD 1本のPR（トンマナ3案＋触れる紙芝居モック＋PRD 本文の showcase ページ込み）**。ユーザーはPRをマージ（=Go）またはクローズ（=ボツ）するだけでよい（＋任意でトンマナ案を1文字返す）。その体験を壊さないよう、途中でユーザーへの質問はせず、判断はこのスキルの基準に従って自分で下す（例外は指名モードの停止条件だけ — そこでも同期的に聞くのではなく issue にコメントを残して終了する）。
 
 ## 起動モード
 
-最初にどのモードで呼ばれたかを判定する。どのモードでも Step 0（準備）は必ず通り、成果物の形（PRD の PR + Slack 通知）は同じ。
+最初にどのモードで呼ばれたかを判定する。どのモードでも Step 0（準備）は必ず通り、成果物の形（PRD の PR + イベント1件）は同じ。
 
 | モード | 起動条件 | 通す Step |
 |---|---|---|
@@ -28,8 +28,7 @@ description: "海外アプリ市場から日本向け個人開発iOSアプリの
 | PRDリポジトリ | `$PRD_VAULT_DIR`（デフォルト: `~/dev/business/prd-vault`。GitHub: `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、デフォルトブランチ `main`） |
 | 設定 | prd-vault 内の `config.yml` — 本数・スコア重み・注目カテゴリ・除外条件。**毎回最初に読む** |
 | PRDテンプレート | prd-vault 内の `templates/PRD_TEMPLATE.md` |
-| Slack webhook | `SLACK_WEBHOOK_URL_PRD`（`$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/business/claude-cron/.env`）を `set -a && source && set +a` で読み込む） |
-| Slack投稿スクリプト | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
+| イベント記録 | `. "$APP_FACTORY_HOME/scripts/lib/events.sh"` して `emit_event`（仕様は `docs/events.md`）。**通知はしない** |
 | 競合チェック | `bash {skill_dir}/scripts/jp_appstore_search.sh "検索語" [limit] [country]` |
 
 ## Step 0: 準備
@@ -211,12 +210,12 @@ PRD化する案ごとに、prd-vault の `showcase/`（Next.js App Router・静�
 [references/showcase-spec.md](references/showcase-spec.md) を**必ず読んでから**作る。
 紙芝居の共通部品コードは [references/prototype-kit.md](references/prototype-kit.md)。
 
-### 8-1. 先に実例を引く
+### 8-1. 先に実例を見る
 
-`app-factory:design-vault` スキルの **query モード**で、この案のカテゴリ・狙う気分に近い実例を引く。
-**方向性の異なるものを混ぜて引くこと**（同系統ばかり見ると3案が3案にならない）。
-vault が空／該当なしなら `app-design-craft` の原則だけで進める — それは劣化ではない。
-引いた画像を使う場合は `showcase/public/refs/` にコピーして参照する。
+この案のカテゴリ・狙う気分に近いアプリを実際に見る。
+**方向性の異なるものを混ぜて見ること**（同系統ばかり見ると3案が3案にならない）。
+該当が無ければ `app-design-craft` の原則だけで進める — それは劣化ではない。
+参照画像を使う場合は `showcase/public/refs/` にコピーして参照する。
 
 ### 8-2. 作るページ（4つ）
 
@@ -289,9 +288,19 @@ PR本文の冒頭に、レビュー観点を明記する:
 
 続けて: 一言コンセプト / 総合スコアと内訳 / 想定月次収益 / 競合チェック結果の要約 / **showcase の3リンク（トンマナ3案・モック・PRD本文）** / 「マージ=Go、クローズ=ボツ、コメント=修正指示」の操作ガイド、を含める。ドラフトにはしない（マージ操作が承認フローなので、マージ可能な状態で出す）。
 
-## Step 11: Slack通知
+## Step 11: イベント記録
 
-PRD要約（アプリ名・一言コンセプト・スコア・想定収益・PRリンク・操作ガイド1行）を `/tmp/prd_notify.md` に書き、slack-post スクリプトで `$SLACK_WEBHOOK_URL_PRD` に投稿する。長文を貼らない — 読むのはスマホ。詳細はPRリンク先で読んでもらう。
+**通知はしない。** PRD が1本できたことをイベントに残すだけで、誰にどう知らせるかは利用者の受け手が決める。
+
+```bash
+. "$APP_FACTORY_HOME/scripts/lib/events.sh"
+EVENT_JOB=app-idea-hunt
+emit_event kind=proposal_opened severity=action app="<アプリ名>" \
+  title="<一言コンセプト>（スコア N / 想定月次 ¥X）。マージ=Go、クローズ=ボツ、コメント=修正指示" \
+  url="<PR URL>" score=N revenue_est=X
+```
+
+`title` に長文を貼らない — 詳細は PR リンク先で読んでもらう。
 
 showcase の確認先も添える:
 
@@ -303,7 +312,7 @@ showcase の確認先も添える:
 
 ## 収穫ゼロのとき
 
-全候補が基準を満たさなかった場合、無理にPRDを出さない（質の低い提案はパイプラインの信頼を毀損する）。`rejected/` への記帳だけ行い、Slackに「今週は基準を満たすネタがなかった」と主な脱落理由とともに短く報告する。
+全候補が基準を満たさなかった場合、無理にPRDを出さない（質の低い提案はパイプラインの信頼を毀損する）。`rejected/` への記帳だけ行い、`kind=job_finished` / `severity=info` のイベントに「今週は基準を満たすネタがなかった」と主な脱落理由を書く。
 
 ただし**収穫ゼロにする前に、脱落理由の内訳を数えて自己点検する**（2026-08-12 改訂: 定性表現をやめて手順にした）。
 
@@ -368,7 +377,7 @@ Step 0 → **Step 2**（除外フィルタ）→ **Step 2.5**（海外の機能�
 
 - **Step 9（記帳）の例外**: 昇格元の `ideas/{slug}.md` の削除は、main ではなく **PRブランチに含める**。通常の記帳を main 直コミットにしているのは「PRが却下されても記帳が消えないように」だが、`ideas/` の削除は却下されたら巻き戻ってほしい変更なので PR 側が正しい（マージ=昇格確定で消える／クローズ=ボツで `ideas/` に残る）
 - **Step 10（PR）**: PR本文の冒頭に「指名元: #N（`ideas/` からの昇格 / 持ち込み）」を書き、`Closes #N` を入れる（マージ時に issue が自動で閉じる）。PRを作ったら issue に `processed` ラベルを付け、PRリンクを `🤖` コメントで残す（再検知の防止）
-- **Step 11（Slack）**: 「指名（issue #N）由来」と1行入れ、週次の自動提案と区別できるようにする
+- **Step 11（イベント）**: `meta.origin=issue-N` を付け、週次の自動提案と区別できるようにする
 
 ## 改訂モード（PRコメントへの対応）
 
@@ -384,4 +393,4 @@ prd-vault のPRにユーザーからコメントが付いている場合:
 3. その他の指示に沿ってPRDを改訂し、同じブランチに commit & push
    （showcase を触ったら `npx next build` が通ることを確認してからコミットする）
 4. 対応内容の要約をPRにコメントで返す。**コメントは必ず `🤖` で始める**（承認チェックジョブが bot 返信とユーザー指示を区別するマーカー）
-5. Slackに「改訂しました」と短く通知
+5. `emit_event kind=proposal_opened severity=action` で「改訂しました」を短く残す

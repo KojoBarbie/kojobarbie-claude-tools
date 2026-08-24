@@ -1,6 +1,6 @@
 ---
 name: app-kickoff
-description: "マージされたPRD（prd-vault）から新規iOSアプリの開発環境を一式セットアップする: XcodeGenでのXcodeプロジェクト生成→ビルド確認→GitHub privateリポジトリ作成→MVP機能のissue登録→デザインコンセプトシート（HTML+アーティファクト公開）→Bundle ID登録→remote-controlセッション起動→Slack通知。Use when: (1) prd-vaultのPRがマージされたとき（承認チェックジョブから）、(2)「○○をGoして」「○○の開発を始めて」「キックオフして」と言われたとき、(3) 新規iOSアプリプロジェクトの立ち上げやセットアップを頼まれたとき全般。"
+description: "マージされたPRD（prd-vault）から新規iOSアプリの開発環境を一式セットアップする: XcodeGenでのXcodeプロジェクト生成→ビルド確認→GitHub privateリポジトリ作成→MVP機能のissue登録→デザインコンセプトシート（HTML+アーティファクト公開）→Bundle ID登録→remote-controlセッション起動まで。Use when: (1) prd-vaultのPRがマージされたとき（承認チェックジョブから）、(2)「○○をGoして」「○○の開発を始めて」「キックオフして」と言われたとき、(3) 新規iOSアプリプロジェクトの立ち上げやセットアップを頼まれたとき全般。"
 ---
 
 # App Kickoff
@@ -17,8 +17,8 @@ Goサイン（prd-vaultのPRマージ）が出たPRDを、**スマホからそ�
 | プロジェクト配置先 | `$APPS_DIR/{AppName}/`（デフォルト: `~/dev/business`） |
 | 雛形生成 | `bash {skill_dir}/scripts/new_project.sh <AppName>`（XcodeGen使用。`APPLE_TEAM_ID`・`BUNDLE_ID_PREFIX` を環境変数から注入） |
 | 規約・構成のお手本 | `$APPS_DIR/Hirune/`（CLAUDE.md・docs/・.claude/skills の構成が最新の標準。作者環境の前提 — 無い環境ではお手本参照を省略し、本スキル記載の構成要件だけで書き起こす） |
-| Slack webhook / ASC APIキー | `$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/business/claude-cron/.env`。`SLACK_WEBHOOK_URL_PRD`, `APP_STORE_*`） |
-| Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$SLACK_WEBHOOK_URL_PRD"`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
+| ASC APIキー | `$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/business/claude-cron/.env`。`APP_STORE_*`） |
+| イベント記録 | `. "$APP_FACTORY_HOME/scripts/lib/events.sh"` して `emit_event`（仕様は `docs/events.md`）。**通知はしない** |
 
 ## Step 1: PRDの特定と熟読
 
@@ -95,7 +95,7 @@ xcodebuild -project {AppName}.xcodeproj -scheme {AppName} \
   - **空状態の設計**: 初回の空に何を出すか。**次の一歩を示す CTA を必ず1つ**
   - **遷移とフィードバック**: 主要な画面遷移の種類、押下フィードバック、触覚を入れる瞬間（絞る）
 - 形式: Artifact用フラグメント（`<!DOCTYPE>`や`<html>`タグなし、`<title>`タグはあり）。SF Proは `ui-rounded` / `-apple-system` で参照（閲覧はiPhoneのSafari想定）
-- **Artifactツールが使えるなら**このファイルを公開し、URLを控える（favicon はアプリの世界観に合う絵文字、以後の再公開でも同じものを使う）。ヘッドレス実行などでArtifactツールがない場合は公開をスキップし、Slack通知に「アーティファクト未公開（`docs/design-concept.html` 参照）」と書く
+- **Artifactツールが使えるなら**このファイルを公開し、URLを控える（favicon はアプリの世界観に合う絵文字、以後の再公開でも同じものを使う）。ヘッドレス実行などでArtifactツールがない場合は公開をスキップし、完了イベントに「アーティファクト未公開（`docs/design-concept.html` 参照）」と書く
 
 ## Step 5.5: LP（`lp/` + app-ads.txt + 規約ページ）
 
@@ -187,12 +187,12 @@ Firebase / RevenueCat / AdMob / Firebase Hosting（LP）の具体的なコマン
    ```bash
    python3 ${CLAUDE_PLUGIN_ROOT}/skills/xcode-cloud-setup/scripts/asc_cloud.py register-bundle-id "${BUNDLE_ID_PREFIX}.{slug}" {AppName}
    ```
-2. **オンボーディング待ちリストに登録（自動）**: 承認チェックジョブ（毎日9時/21時）がASC APIでオンボーディング完了をポーリングし、検知したらTestFlightワークフロー2本を自動作成してSlack通知する:
+2. **オンボーディング待ちリストに登録（自動）**: 承認チェックジョブ（毎日9時/21時）がASC APIでオンボーディング完了をポーリングし、検知したらTestFlightワークフロー2本を自動作成してイベントに残す:
    ```bash
    mkdir -p "$APP_FACTORY_HOME"/.data
    printf '%s\t%s\t0\n' {AppName} "$(date +%s)" >> "$APP_FACTORY_HOME"/.data/pending_xcode_cloud.txt
    ```
-   （タブ区切り: アプリ名・登録epoch・最終リマインドepoch。3日以上未完了だと3日おきにチェックリストがSlackに再送される）
+   （タブ区切り: アプリ名・登録epoch・最終リマインドepoch。未完了のあいだは `pending.json` の `onboarding` グループに出続ける）
 3. **Firebase プロジェクト作成と紐付け（自動）**: `{slug}-app` を作成 → iOS アプリ登録 →
    `GoogleService-Info.plist` を取得してターゲット直下に配置・コミット（references 参照。
    firebase CLI 未認証なら諦めてチェックリスト行き）
@@ -203,7 +203,7 @@ Firebase / RevenueCat / AdMob / Firebase Hosting（LP）の具体的なコマン
    Hosting サイトを作成 → `lp/dist` をビルドして `firebase deploy --only hosting:lp`。
    `https://{slug}-lp.web.app/app-ads.txt` の 200 を確認（`.web.app` は取れた実サイト名で読み替え。
    firebase CLI 未認証ならチェックリスト行き）
-6. **手動ステップ**（Step 11 でチェックリストとしてSlackに送る）:
+6. **手動ステップ**（Step 11 で `human_task` イベントとして出す）:
    - App Store Connectでアプリレコード作成（登録済みBundle IDを選ぶだけ、約2分）
    - Xcodeで一度だけXcode Cloudをオンボーディング（Product > Xcode Cloud、初回ワークフロー作成とGitHub接続）
    - **AdMob でアプリ追加 + 広告ユニット作成 + デベロッパーサイト登録**（アプリ作成 API が存在しないため必ず人力。
@@ -229,27 +229,36 @@ until grep -qo 'https://claude.ai/code/session_[A-Za-z0-9]*' "$RC_LOG"; do sleep
 grep -o 'https://claude.ai/code/session_[A-Za-z0-9]*' "$RC_LOG" | head -1
 ```
 
-起動済みの同名セッションが残っていないか `pgrep -f "remote-control {AppName}"` で先に確認する。URLが取れなくても失敗にはせず、Slackに「スマホのClaudeアプリのセッション一覧から `{AppName}` を開いてください」と書く。
+起動済みの同名セッションが残っていないか `pgrep -f "remote-control {AppName}"` で先に確認する。URLが取れなくても失敗にはせず、完了イベントに「スマホのClaudeアプリのセッション一覧から `{AppName}` を開いてください」と書く。
 
-## Step 11: Slack通知
+## Step 11: イベント記録
 
-以下を含む短い完了報告を `$SLACK_WEBHOOK_URL_PRD` に投稿する:
+**通知はしない。** キックオフが終わったことと、人間に残った手作業をイベントに残す。
 
-- アプリ名とリポジトリURL
-- デザインコンセプトのアーティファクトURL（:art: 絵文字付きで目立たせる）
-- 作成したissueの一覧（番号＋タイトル）
-- remote-controlセッションのURL（「タップしてそのまま開発を始められます」）
-- **手動タスクのチェックリスト**。必ず以下の形式（`☐` プレフィックス）で、自動検知されることも添える:
-
+```bash
+. "$APP_FACTORY_HOME/scripts/lib/events.sh"
+EVENT_JOB=app-kickoff
 ```
-:clipboard: *手動でやること*
-☐ 1. App Store Connectでアプリを作成（Bundle ID `${BUNDLE_ID_PREFIX}.{slug}` は登録済み・選ぶだけ）
-☐ 2. Xcodeで {AppName} を開き Product > Xcode Cloud からオンボーディング（GitHub接続込み）
-☐ 3. AdMobで「アプリを追加」→ 広告ユニット作成 → デベロッパーサイトに https://{slug}-lp.web.app を登録
-     → アプリID (ca-app-pub-…) を広告実装issueにコメント
 
-1と2は完了したら自動検知（毎日9時/21時）され、PR→TestFlightとタグ(v*)→TestFlightの
-ワークフロー2本が自動作成されてSlackに通知が届きます。合言葉は不要です。
+1件目 — 完了報告（アプリ名・リポジトリURL・デザインコンセプトのアーティファクトURL・
+作成したissue数・remote-controlセッションURL を `meta` に入れる）:
+
+```bash
+emit_event kind=job_finished severity=info app="{AppName}" \
+  title="キックオフ完了（issue N 件を起票）" url="<リポジトリURL>" \
+  design_concept="<アーティファクトURL>" remote_session="<セッションURL>"
+```
+
+2件目以降 — **人間にしかできない手作業を1件1イベント**で。
+`severity=action` なので受け手はこれを拾って人間に見せる:
+
+```bash
+emit_event kind=human_task severity=action app="{AppName}" \
+  title="App Store Connect でアプリを作成（Bundle ID ${BUNDLE_ID_PREFIX}.{slug} は登録済み・選ぶだけ）。完了は毎日9時/21時に自動検知され、TestFlight ワークフロー2本が自動作成される"
+emit_event kind=human_task severity=action app="{AppName}" \
+  title="Xcode で {AppName} を開き Product > Xcode Cloud からオンボーディング（GitHub接続込み）。完了は自動検知される"
+emit_event kind=human_task severity=action app="{AppName}" \
+  title="AdMob で「アプリを追加」→ 広告ユニット作成 → デベロッパーサイトに https://{slug}-lp.web.app を登録 → アプリID (ca-app-pub-…) を広告実装issueにコメント"
 ```
 
 Firebase / RevenueCat / Firebase Hosting（LP）の自動セットアップに失敗したものがあれば、そのフォールバック手順
