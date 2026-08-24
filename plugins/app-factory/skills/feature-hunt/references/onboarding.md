@@ -44,7 +44,7 @@ bash {skill_dir}/scripts/jp_appstore_search.sh "検索語" 10 jp
 下書きができたら:
 
 - **対話セッションの場合**: `grill-me` スキルを使い、下書きを叩き台にユーザーをグリルして各セクションを確定させる。特に「コア体験」と「non-goals」はコードからは読み取れないので、ここで必ず本人の言葉を引き出す
-- **無人実行の場合**: 下書きの冒頭に `> ⚠️ 自動生成の下書きです。次回の対話でグリルして確定してください` と付けて保存し、Slack通知に確認依頼を含める。未確定でも週次実行は止めない
+- **無人実行の場合**: 下書きの冒頭に `> ⚠️ 自動生成の下書きです。次回の対話でグリルして確定してください` と付けて保存し、`kind=needs_input` / `severity=action` のイベントで確認を依頼する。未確定でも週次実行は止めない
 
 ### 5. feature-hunt.yml を書く
 
@@ -75,4 +75,4 @@ gh label create go --color "FBCA04" --description "この提案を承認する" 
 
 ### 8. 報告
 
-対話ならチャットで、無人実行ならSlackで: 設定した競合・App Store ID・Analytics接続状況・product-contextの確定状況を報告する。
+対話ならチャットで、無人実行なら `kind=job_finished` のイベントに: 設定した競合・App Store ID・Analytics接続状況・product-contextの確定状況を報告する。

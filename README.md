@@ -64,7 +64,7 @@ GitHub issue から PR・セルフレビューまでの開発ワークフロー�
 | スキル | 役割 |
 |---|---|
 | **app-idea-hunt** | 海外市場からネタ発掘 → JTBD 分析（ジョブ分解・人気の因果・日本への移転可能性）→ KPI 設計（具体的な数値目標）→ モック/トンマナページ生成（prd-vault の showcase サイト）→ PRD を PR として提案。 |
-| **app-kickoff** | マージされた PRD から開発環境を一式セットアップ（XcodeGen・GitHub リポジトリ・MVP issue（計測実装 issue 必須）・デザインシート・Bundle ID・Slack 通知）。 |
+| **app-kickoff** | マージされた PRD から開発環境を一式セットアップ（XcodeGen・GitHub リポジトリ・MVP issue（計測実装 issue 必須）・デザインシート・Bundle ID）。 |
 | **xcode-cloud-setup** | ASC API で TestFlight ワークフロー2本（PR / タグトリガー）を自動作成。Bundle ID 登録も担当。 |
 | **factory-build** | 「手」。ポートフォリオ全体から issue を優先度順に選び、計画承認なしで実装 → PR → セルフレビュー → 条件付き auto-merge（段階導入スイッチ + 安全条件）。1回最大3件（同一アプリ1件）・8時間ごと。open PR が10本以上溜まったリポジトリには新規 PR を出さない。 |
 | **store-release** | App Store 提出の自動化。MVP 完了検知 → PRD からメタデータ生成 → `release-train` issue による24時間拒否権 → ASC API で提出 → 審査追跡。初回は人間併走。 |
@@ -73,7 +73,7 @@ GitHub issue から PR・セルフレビューまでの開発ワークフロー�
 
 | スキル | 役割 |
 |---|---|
-| **portfolio-review** | 週次の「脳」。全アプリのメトリクス（Firebase / ASC / RevenueCat）→ PRD の KPI マイルストーン（M1〜M3）でステージゲート判定 → `prd-vault/portfolio.yml` 更新 → 翌週の横断ジョブ割当表を生成 → 要判断を集約した週報を Slack に1通。 |
+| **portfolio-review** | 週次の「脳」。全アプリのメトリクス（Firebase / ASC / RevenueCat）→ PRD の KPI マイルストーン（M1〜M3）でステージゲート判定 → `prd-vault/portfolio.yml` 更新 → 翌週の横断ジョブ割当表を生成 → 要判断を集約した週報を1本書き出す。 |
 | **quality-release-cycle** | 品質サイクル運用。audit（4次元監査 → コード裏取り → Issue 化）/ release（リリース可否判定）/ status の3モード。 |
 | **feature-hunt** | 既存アプリの新機能を週次提案。競合レビュー・コードベース・Firebase Analytics の3情報源から最大3件を Issue 化、承認（👍/go）で sub-issue に分割。 |
 | **growth-advisor** | growing アプリへコード探索＋ジョブ分析＋KPI 実績から多軸グロース提案（機能/収益化/ASO/リテンション）。出力は feature-hunt と同じ承認フローに流れる。 |
@@ -81,7 +81,65 @@ GitHub issue から PR・セルフレビューまでの開発ワークフロー�
 - **セットアップ・必要なもの・残る人力作業の一覧**: [docs/setup-runbook.md](docs/setup-runbook.md)
 - 環境設定（パス・GitHub owner・Bundle ID プレフィックス等）は `~/.config/app-factory/config.env`（`cron/install.sh` が生成。デフォルトは作者環境の値）
 - 定期実行（launchd）の導入・移行は `plugins/app-factory/cron/`（深夜帯中心のスケジュール。README に移行手順）
-- ⚠️ このリポジトリは**パブリック**。スキルに Slack webhook の実 URL・API キー等のシークレットを書かないこと（参照は環境変数名のみ。実値はジョブ実行環境（`$APP_FACTORY_HOME`）の `.env`）
+- ⚠️ このリポジトリは**パブリック**。スキルに API キー等のシークレットを書かないこと（参照は環境変数名のみ。実値はジョブ実行環境（`$APP_FACTORY_HOME`）の `.env`）
+- ⚠️ **通知手段を持ち込まないこと。** App Factory は状態を GitHub に、起きたことを `data/events.jsonl` に落とすところまでが責務で、配送は利用者の担当（[docs/events.md](docs/events.md)、下記「通知を繋ぐ」）
+
+### 通知を繋ぐ
+
+App Factory は**通知手段を持たない**。判断待ちと起きたことをファイルに落とすところまでが責務で、
+「誰にどう知らせるか」は各自が決める。データ仕様は [docs/events.md](docs/events.md)。
+
+| ファイル | 中身 |
+|---|---|
+| `$APP_FACTORY_HOME/data/pending.json` | いま人間の行動を待っているもの（`run_factory_reminder.sh` が生成）。各項目に依頼文（`title`）だけでなく **CI と mergeable の実態**が入っている |
+| `$APP_FACTORY_HOME/data/events.jsonl` | 起きたこと（各ジョブが追記。`severity` は `info` / `action` / `error`） |
+
+素の受け手は同梱してある。整形して標準出力に出すだけで、どこへも配送しない:
+
+```bash
+$APP_FACTORY_HOME/scripts/notify_stdout.sh
+```
+
+#### 例: Slack に1日1通のサマリを出す
+
+以下を自分の環境に置いて cron / launchd から呼ぶ（**このリポジトリには入れないこと**）。
+明細は出さず、件数とダッシュボードへの導線だけにするのが要点 —
+明細まで流すと結局そこが読めなくなる。
+
+```bash
+#!/bin/bash
+set -euo pipefail
+. "$HOME/.config/app-factory/config.env"
+PENDING="$APP_FACTORY_HOME/data/pending.json"
+EVENTS="$APP_FACTORY_HOME/data/events.jsonl"
+SINCE="$(date -v-1d '+%Y-%m-%dT%H:%M:%S')"   # GNU date なら: date -d '1 day ago' ...
+
+TEXT=$(jq -r --arg url "$PR_DESK_URL" '
+  "🗂 判断待ち \(.judge.count)件・推定 \(.judge.cost_total)分（予算 \(.budget_minutes)分）"
+  + (if .judge.over_budget then " ⚠️ 新規生産は停止中" else "" end)
+  # blocked = 依頼をこなしてもマージできないもの。件数だけでも出しておく
+  + (if (.judge.blocked // 0) > 0 then "\n⚠️ うち \(.judge.blocked)件は CI 失敗/コンフリクトで先に直す必要があります" else "" end)
+  + "\n" + ([.groups[] | "\(.label) \(.items | length)"] | join(" / "))
+  + "\n→ " + $url
+' "$PENDING")
+
+# 対応が要るイベント（action / error）だけ件数で添える
+ACT=$(jq -rs --arg s "$SINCE" '
+  [.[] | select(.ts >= $s) | select(.severity != "info")] | length
+' "$EVENTS")
+if [ "$ACT" -gt 0 ]; then
+  TEXT="$TEXT"$'\n'"📋 24時間で対応が要る動き ${ACT}件"
+fi
+
+curl -s -X POST -H 'Content-type: application/json' \
+  --data "$(jq -n --arg t "$TEXT" '{text: $t}')" "$SLACK_WEBHOOK_URL" > /dev/null
+```
+
+同じ2ファイルを読めば、自前のダッシュボード・メール・プッシュ通知なども同様に作れる。
+GitHub 側（ラベル・判断ブロック）を直接読む受け手なら、`events.jsonl` すら要らない。
+
+**操作は必ず GitHub 側に置くこと。** 承認は `approved` / `go` ラベルや 👍、修正指示は PR コメント。
+通知経路を入力にも使うと経路が2系統になり、どちらが本当か分からなくなる。
 
 ### 前提
 

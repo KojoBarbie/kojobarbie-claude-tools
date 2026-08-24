@@ -7,7 +7,7 @@ description: "既存アプリ（swift/flutter配下）の新機能を週次で�
 
 既存アプリの「次に作る新機能」を継続的に提案するパイプライン。app-idea-hunt（新規アプリのネタ探し）の姉妹スキル。
 
-**成果物は最大3件の提案Issue + Slack通知**。ユーザーは各Issueに 👍リアクション or `go`ラベル（=承認）か、close（=見送り）で応えるだけでよい。承認された提案は「1タスク=1PR、そのままship-issueに投げれば実装完了できる」粒度のsub-issueに分割する。
+**成果物は最大3件の提案Issue**（通知はしない）。ユーザーは各Issueに 👍リアクション or `go`ラベル（=承認）か、close（=見送り）で応えるだけでよい。承認された提案は「1タスク=1PR、そのままship-issueに投げれば実装完了できる」粒度のsub-issueに分割する。
 
 ## スコープ（何を提案し、何を提案しないか）
 
@@ -15,7 +15,7 @@ description: "既存アプリ（swift/flutter配下）の新機能を週次で�
 - **提案しない**: バグ修正・パフォーマンス・品質系（`quality-release-cycle` スキルの領分）。マーケ・ASO・GTM施策（PRにならないため）
 - **汎用機能の横付けを弾く**: 提案前に必ず `.claude/product-context.md` を読み、「この提案はコア体験を深めるか？ それともどのアプリにも付けられる汎用機能か？」を自問する。通知センター・ダッシュボード・アクティビティフィードのような「それっぽいが誰の課題も解いていない」提案は出さない
 - 空想的な提案を弾くため、**すべての提案に根拠（実データ・実レビュー・実コードの引用）と検証方法をセットで付ける**。根拠が書けない案は出さない
-- 基準を満たす案がなければ無理に3件出さず、その旨をSlackに報告する
+- 基準を満たす案がなければ無理に3件出さず、その旨を `kind=job_finished` のイベントに書く
 
 ## 前提リソース
 
@@ -28,7 +28,7 @@ description: "既存アプリ（swift/flutter配下）の新機能を週次で�
 | 提案・却下の履歴 | `<アプリ>/.claude/feature-hunt-log.md` |
 | 週次実行の対象リスト | `$APP_FACTORY_HOME/feature_hunt_apps.txt`（`APP_FACTORY_HOME` のデフォルト: `~/dev/business/claude-cron`） |
 | 環境変数 | `$APP_FACTORY_HOME/.env`（`set -a && source && set +a` で読み込む） |
-| Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$WEBHOOK"`。webhookは `SLACK_WEBHOOK_URL_FEATURE` があればそれ、なければ `SLACK_WEBHOOK_URL`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
+| イベント記録 | `. "$APP_FACTORY_HOME/scripts/lib/events.sh"` して `emit_event`（仕様は `docs/events.md`）。**通知はしない** |
 | 競合検索 | `bash {skill_dir}/scripts/jp_appstore_search.sh "検索語" [limit] [country]` |
 | レビュー取得 | `bash {skill_dir}/scripts/appstore_reviews.sh <app_id> [country]`（最新50件） |
 | sub-issueリンク | `bash {skill_dir}/scripts/link_sub_issue.sh <親番号> <子番号>` |
@@ -48,7 +48,7 @@ description: "既存アプリ（swift/flutter配下）の新機能を週次で�
 
 ### Step 0: 設定読み込み
 
-`.claude/feature-hunt.yml` と `.claude/product-context.md` と `.claude/feature-hunt-log.md` を読む。yml が無ければ onboard モードを先に実行する（無人実行時も自動で行い、その旨をSlack報告に含める）。
+`.claude/feature-hunt.yml` と `.claude/product-context.md` と `.claude/feature-hunt-log.md` を読む。yml が無ければ onboard モードを先に実行する（無人実行時も自動で行い、その旨を完了イベントに含める）。
 
 ### Step 1: 前回提案の承認・却下チェック
 
@@ -58,7 +58,7 @@ gh issue list --label feature-proposal --state all --limit 30 --json number,titl
 
 - **open + `go` ラベル or 👍リアクション**（`gh api repos/{owner}/{repo}/issues/N/reactions` で `+1` を確認）→ 承認。「承認後の分割」を実行
 - **closed（`feature-approved` が付いていないもの）** → 見送り。closeコメントがあれば理由として読み取り、`feature-hunt-log.md` に記録する。**却下理由はユーザーの好みの学習データとして最重要** — 次回以降の選定に反映する
-- open のまま反応が無いものは触らない（先週の提案が残っていても今週の提案は出してよいが、未反応が6件を超えていたら新規提案を休み、Slackで「たまっています」とだけ伝える）
+- open のまま反応が無いものは触らない（先週の提案が残っていても今週の提案は出してよいが、未反応が6件を超えていたら新規提案を休み、`kind=job_skipped` / `severity=action` のイベントで「たまっています」とだけ伝える）
 
 ### Step 2: 並列リサーチ（サブエージェント3系統）
 
@@ -66,23 +66,31 @@ gh issue list --label feature-proposal --state all --limit 30 --json number,titl
 
 1. **レビュー分析** — `appstore_reviews.sh` で自アプリ（リリース済みなら）と競合各社（yml の `competitors`）のレビューを取得。★1〜3の不満、「〜だったらいいのに」系の要望を抽出し、頻出テーマと具体的な引用をまとめる
 2. **コードベース考察** — Explore系エージェントがコードを読み、既存機能の棚卸しと「既にあるデータ・基盤で安く作れて効きそうな機能」を挙げる。実装コストの見積もり（S/M/L）付き
-3. **Analytics分析** — yml に `analytics_env_prefix` があるときのみ。`$APP_FACTORY_HOME` の `firebase-bigquery` スキル（作者環境の前提。無ければこの系統をスキップ）の手順でファネル・エンゲージメントを取得し、「離脱が集中している箇所」「使われていない既存機能」を特定する。未設定ならスキップし、Slack報告に「Analytics未接続」と一言添える
+3. **Analytics分析** — yml に `analytics_env_prefix` があるときのみ。`$APP_FACTORY_HOME` の `firebase-bigquery` スキル（作者環境の前提。無ければこの系統をスキップ）の手順でファネル・エンゲージメントを取得し、「離脱が集中している箇所」「使われていない既存機能」を特定する。未設定ならスキップし、完了イベントに「Analytics未接続」と一言添える
 
 ### Step 3: 統合・選定（最大3件）
 
 - 3系統の材料を突き合わせ、複数の情報源が同じ方向を指す案を優先する
 - **重複チェック**: `gh issue list --state all --limit 100` の全タイトルと `feature-hunt-log.md` に対して行う。過去に却下された案・既存issueと同じ案は出さない
 - **コア体験フィルタ**（上記スコープ参照）を通す
-- **収益化観点を毎回必ず1回は検討する**（採用しなくてもよいが、検討した形跡をSlack報告に残す）
+- **収益化観点を毎回必ず1回は検討する**（採用しなくてもよいが、検討した形跡を完了イベントに残す）
 - カテゴリ（新機能/改善/収益化）と規模（S/M/L）を付ける
 
 ### Step 4: Issue起票
 
 [references/proposal-format.md](references/proposal-format.md) のフォーマットで1提案=1 Issueを作成。ラベル `feature-proposal` を付ける。作成後、`feature-hunt-log.md` に提案履歴を追記してコミット・プッシュする。
 
-### Step 5: Slack通知
+### Step 5: イベント記録
 
-各提案のタイトル・カテゴリ・規模・根拠の要約と、Issue URLを投稿する。「👍 or `go`ラベルで承認 / closeで見送り」の操作方法を毎回一行添える。
+**通知はしない。** 起票した提案を**1件1イベント**で残す。誰にどう知らせるかは利用者の受け手が決める。
+
+```bash
+. "$APP_FACTORY_HOME/scripts/lib/events.sh"
+EVENT_JOB=feature-hunt
+emit_event kind=proposal_opened severity=action app="<アプリ名>" \
+  title="<提案タイトル>（<カテゴリ>/<規模>）— <根拠の要約>。👍 か go ラベルで承認 / close で見送り" \
+  url="<Issue URL>"
+```
 
 ## 承認後の分割（approve）
 
@@ -90,7 +98,7 @@ gh issue list --label feature-proposal --state all --limit 30 --json number,titl
 2. 各sub-issueは **ship-issueに番号を渡すだけで実装が始められる**ように書く: 目的 / 変更内容 / 受け入れ条件（観測可能な形で）/ 対象ファイルの見当 / 依存関係（着手順）
 3. `gh issue create` で作成し（返り値URLから番号を取る）、`link_sub_issue.sh <親> <子>` でネイティブsub-issueとしてリンク。スクリプトが失敗したら親本文のタスクリスト（`- [ ] #N`）で代替
 4. 親Issueのラベルを `feature-proposal` → `feature-approved` に付け替え、`go` ラベルは外す。親本文に着手順のチェックリストを追記
-5. `feature-hunt-log.md` に承認を記録し、Slackに「#N を分割しました（sub-issue: #a #b #c、推奨着手順つき）」と通知
+5. `feature-hunt-log.md` に承認を記録し、`emit_event kind=job_finished severity=info app="<アプリ名>" summary="#N を分割しました（sub-issue: #a #b #c、推奨着手順つき）"`
 6. 対話セッション中なら、分割の粒度をユーザーと相談しながら進めてよい
 
 ## 学習ログ（feature-hunt-log.md）

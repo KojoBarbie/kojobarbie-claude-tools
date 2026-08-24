@@ -72,16 +72,15 @@ showcase/
 
 ### 3案の作り方
 
-1. まず `app-factory:design-vault` の **query モード**で、このアプリのカテゴリ・気分に近い実例を引く
-   （「学習アプリ・達成感を出したい・リファレンスを出して」のように依頼する）。
-   vault が空／該当なしなら `app-design-craft` の原則だけで作る（それは劣化ではない）
+1. まずこのアプリのカテゴリ・気分に近いアプリを実際に見る。
+   該当が無ければ `app-design-craft` の原則だけで作る（それは劣化ではない）
 2. **軸をずらして3案作る**。色違いの3案は3案ではない。
    ずらすのは「世界観の核」そのもの。例:
    - A: 静謐ミニマル（余白最大・無彩色＋1色・小さく静かな動き）
    - B: 温かみクラフト（手書き感・生成りの色・柔らかい角丸・親しみのあるコピー）
    - C: 大胆エディトリアル（特大タイポ・高コントラスト・非対称レイアウト・きびきびした動き）
    ※ この3つは例。**アプリのジョブに合う軸**で毎回考えること（機械的にA/B/Cを再利用しない）
-3. 各案に**採用した実例の根拠**を付ける。design-vault から引いたなら画像を実際に表示する（下記）
+3. 各案に**採用した実例の根拠**を付ける。参照画像があれば実際に表示する（下記）
 
 ### 各案に含める要素
 
@@ -92,11 +91,9 @@ showcase/
 - **唯一の強調装置**: 最重要をどう光らせるか（塗りpill / 下線 / 特大数字 など）を実物で1つ
 - **ボイス**: 同じUI文言を3案それぞれの言い回しで書き比べる（例: 保存ボタン、空状態の一文）
 - **この案が向くジョブ / 向かないジョブ**を1行ずつ
-- **参照した実例**（design-vault から引いた場合）: 画像を `<img>` で表示し、
-  「どこを取ったか」を1行添える。パスは showcase から見た相対パス
-  （例: `../../../../design-vault/refs/duolingo/xxx.jpg` — ビルド時に `public/` へコピーするより、
-  `next.config.mjs` の `images: { unoptimized: true }` の下で通常の `<img src>` を使うほうが単純。
-  `out/` に含めるため、**参照画像は `showcase/public/refs/` にコピーして参照する**）
+- **参照した実例**（あれば）: 画像を `<img>` で表示し、「どこを取ったか」を1行添える。
+  `next.config.mjs` の `images: { unoptimized: true }` の下で通常の `<img src>` を使う。
+  `out/` に含めるため、**参照画像は `showcase/public/refs/` にコピーして参照する**
 
 ページの地は明るく組む（サイトの規約）。ただし**紹介するトンマナ案が暗い外観でも構わない**
 （案のスウォッチ・モックはその案の配色で見せる）。PRD の「デザイン方向性メモ」は**3案のうち推しの案**と一致させ、
@@ -226,7 +223,7 @@ export function loadPrd(slug: string): string {
    サイト名ヘッダー、`.prd` の typography
 5. `showcase/app/page.tsx` — apps.json を import して一覧表示
 6. `showcase/lib/proto.tsx` と `showcase/lib/prd.ts` — [prototype-kit.md](prototype-kit.md) からコピー
-7. `showcase/public/refs/` — design-vault から参照画像をコピーする先（`.gitkeep` を置く）
+7. `showcase/public/refs/` — 参照画像を置く先（`.gitkeep` を置く）
 8. `showcase/.gitignore` — `node_modules` / `.next` / `out` / `tsconfig.tsbuildinfo`
 9. `cd showcase && npm install && npx next build` が通り、`out/` が生成されることを確認する
    （tsconfig.json / next-env.d.ts が自動生成されるので tsconfig.json はコミットする）

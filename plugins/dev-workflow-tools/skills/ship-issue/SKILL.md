@@ -132,6 +132,7 @@ type: run
 risk: low
 cost: 5
 expires: <作成日+14日 YYYY-MM-DD>
+asked_at: <本日 YYYY-MM-DD>
 shots: <App>/<PR番号>
 -->
 
@@ -195,7 +196,6 @@ EOF
    撮れなければ「ビジュアル未確認」と理由を PR に書く — **黙って飛ばさない**
 2. 画像を **Read ツールで実際に見て**、`app-design-craft` の9レンズで点検する。
    突き合わせ先は ①`docs/design-concept.html` ②紙芝居モック（showcase）③状態の網羅
-   ④design-vault の同種画面
 3. 所見を `🤖 ビジュアルレビュー:` で始まるコメントとして PR に投稿する（指摘は3点まで）
 4. **判断ブロックを撮った結果に合わせて更新する**（PR 番号は作成後にしか決まらないのでここで確定させる）:
    - `shots: <アプリ名>/<PR番号>` を書き込む（撮れなかった場合は行ごと削除する）
@@ -256,7 +256,20 @@ GitHub Actions のレビューには頼らず、**ローカルのサブエージ
    ```bash
    git push origin HEAD
    ```
-5. **各コメントに返信**（`pr-comment-reply`）：
+5. **判断ブロックを実態に合わせ直す**（`references/judge-block.md` の「ask を書き換えなければならないとき」）：
+   コンフリクト解消・CI 修正・指摘対応で PR の状態が変わったら、
+   `ask` / `type` / `cost` を書き直し、`asked_at` を本日にする。
+
+   ```bash
+   gh pr view <PR番号> --json body -q .body > /tmp/body.md   # judge:v1 と ask を書き換えて
+   gh pr edit <PR番号> --body-file /tmp/body.md
+   ```
+
+   > 直したのに ask が「コンフリクトしています」のままだと、人間は次に見たときも
+   > 同じ文面を読んで「まだ壊れている」と判断し、また飛ばす。**永久に進まなくなる。**
+   > 直した後の ask には**次に人間がやること**を書く。
+
+6. **各コメントに返信**（`pr-comment-reply`）：
    ```bash
    bash ${CLAUDE_PLUGIN_ROOT}/skills/pr-comment-reply/scripts/reply_to_pr_comment.sh <owner> <repo> <comment_id> "<body>"
    ```

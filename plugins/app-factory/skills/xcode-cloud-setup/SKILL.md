@@ -51,14 +51,14 @@ set -a && source "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}/.env" && s
 
 ## 自動検知の仕組み（前提）
 
-通常はこのスキルを手で呼ぶ必要はない。`app-kickoff` がアプリ名を `$APP_FACTORY_HOME/.data/pending_xcode_cloud.txt` に登録し、承認チェックジョブ（`run_prd_approval_check.sh`、毎日9時/21時）が `check-onboarded` でポーリング → 検知したら `create-workflows` 実行 → Slack通知、まで全自動で行う。3日以上未完了のアプリには3日おきに手動タスクのチェックリストをSlackに再送する。このスキルを手動で使うのは、自動作成が失敗したときのリカバリーや、既存アプリへの追加設定のとき。
+通常はこのスキルを手で呼ぶ必要はない。`app-kickoff` がアプリ名を `$APP_FACTORY_HOME/.data/pending_xcode_cloud.txt` に登録し、承認チェックジョブ（`run_prd_approval_check.sh`、毎日9時/21時）が `check-onboarded` でポーリング → 検知したら `create-workflows` 実行 → イベント記録、まで全自動で行う。未完了のアプリは `pending.json` の `onboarding` グループに残り続ける。このスキルを手動で使うのは、自動作成が失敗したときのリカバリーや、既存アプリへの追加設定のとき。
 
 ## 手順
 
 1. `status <AppName>` でオンボーディング状態を確認
 2. ciProductが見つからない場合: ユーザーに手動手順を案内して終了 — 「App Store Connectでアプリ作成（Bundle IDは登録済み）→ Xcodeで Product > Xcode Cloud > Create Workflow（GitHub接続もこの流れで）。終わったらもう一度声をかけてください」
 3. ciProductがある場合: `create-workflows <AppName>` を実行し、作成された2本のワークフロー名とIDを報告。既存ワークフローと重複する名前があればスキップして報告。削除したワークフローがあれば何を消したかも報告する
-4. 結果をSlack（`$SLACK_WEBHOOK_URL_PRD`）に短く通知する（キックオフの流れで呼ばれた場合のみ）
+4. 結果を `emit_event` でイベントに残す（キックオフの流れで呼ばれた場合のみ。通知はしない）
 
 ## トラブルシューティング
 

@@ -4,7 +4,7 @@ description: >
   App Factory の「脳」。全アプリのメトリクス（Firebase Analytics / ASC / RevenueCat / AdMob）を取得し、
   PRD の KPI マイルストーン（M1〜M3）に対する達成状況でステージゲートを判定、
   prd-vault/portfolio.yml を更新して、翌週の横断ジョブ割当表（factory_schedule.tsv）を生成し、
-  人間の要判断事項を集約した週報を Slack に1通投稿する。
+  人間の要判断事項を集約した週報を1本書き出す（通知はしない）。
   毎週金曜 17:00 に launchd（com.claude.portfolio-review）から無人実行されるほか、
   「ポートフォリオレビューして」「週報を作って」「アプリの状況をまとめて」「ステージ判定して」
   と言われたら手動でも使う。portfolio.yml が無ければ既存資産から自動ブートストラップする。
@@ -17,7 +17,7 @@ App Factory サイクルの意思決定を担う週次スキル。役割は4つ:
 1. **計測**: 全アプリの KPI を実データで観測する（取れない指標は「未計測」と明示）
 2. **判定**: PRD のマイルストーン（M1〜M3）とステージゲートを機械的に適用する
 3. **配車**: 翌週の横断ジョブ（feature-hunt / audit / growth-advisor）を1日1リポジトリに割り当てる
-4. **報告**: 人間の要判断をすべて集約した週報を Slack に1通出す
+4. **報告**: 人間の要判断をすべて集約した週報を1本書き出し、イベントに1件残す
 
 このスキルだけが portfolio.yml の `stage` を書き換えてよい（人間の手動編集は別）。
 
@@ -26,9 +26,9 @@ App Factory サイクルの意思決定を担う週次スキル。役割は4つ:
 **最初に `~/.config/app-factory/config.env` を読み込む**（無ければ各変数は括弧内のデフォルト値を使う）。
 
 - prd-vault: `$PRD_VAULT_DIR`（デフォルト: `~/dev/business/prd-vault`。リポジトリ `$GITHUB_OWNER/$(basename "$PRD_VAULT_DIR")`、状態ファイル `portfolio.yml`）
-- ジョブ実行環境: `$APP_FACTORY_HOME`（デフォルト: `~/dev/business/claude-cron`。`.env`、`data/`、`logs/`。firebase-bigquery / slack-post スキルは作者環境の前提 — 無い環境では該当計測を unmeasured 扱い / curl で直接 POST）
-- `.env` から読む: `SLACK_WEBHOOK_URL_FACTORY`（無ければ `SLACK_WEBHOOK_URL`）、GA/BigQuery 認証、
-  `REVENUECAT_API_KEY`（未設定なら収益は未計測扱い）、`APP_STORE_*`（ASC API）
+- ジョブ実行環境: `$APP_FACTORY_HOME`（デフォルト: `~/dev/business/claude-cron`。`.env`、`data/`、`logs/`、`scripts/lib/events.sh`。firebase-bigquery スキルは作者環境の前提 — 無い環境では該当計測を unmeasured 扱い）
+- `.env` から読む: GA/BigQuery 認証、`REVENUECAT_API_KEY`（未設定なら収益は未計測扱い）、
+  `APP_STORE_*`（ASC API）
 
 ## ステップ 0: portfolio.yml の読み込み（無ければブートストラップ）
 
@@ -118,11 +118,22 @@ dispatcher が bash で読むための形式。列: `日付<TAB>アプリ名<TAB
 - `data/factory_apps.tsv` も同時に更新する（bash ゲート用のミラー。
   列: `アプリ名<TAB>絶対パス<TAB>owner/repo<TAB>stage`）
 
-## ステップ 5: 週報を Slack に1通
+## ステップ 5: 週報を書き出す
 
-`slack_post.py`（`$APP_FACTORY_HOME` の slack-post スキル。作者環境の前提 — 無い環境では
-curl で webhook に直接 POST）で `SLACK_WEBHOOK_URL_FACTORY`
-（無ければ `SLACK_WEBHOOK_URL`）へ投稿する。構成（この順で・全部入れる）:
+**通知はしない。** 週報は `$APP_FACTORY_HOME/data/reports/portfolio-YYYY-MM-DD.md` に Markdown で書き、
+イベントを1件出して終える（仕様は `docs/events.md`）:
+
+```bash
+. "$APP_FACTORY_HOME/scripts/lib/events.sh"
+EVENT_JOB=portfolio-review
+emit_event kind=report severity=info \
+  title="週報 2026-08-21（第N週）— 収益合計 ¥X / 要アクション Y 件" \
+  path="data/reports/portfolio-2026-08-21.md"
+```
+
+誰にどう知らせるかは利用者の受け手が決めるので、Slack にも他のどこにも投稿しない。
+
+週報本文の構成（この順で・全部入れる）:
 
 1. **今週の動き**: 生まれた PRD / kickoff されたアプリ / マージされた PR 数 / リリース・提出
 2. **アプリ別サマリ表**: name / stage / 主要指標（DL・DAU・D1・収益）/ trend / KPI 達成状況。
@@ -130,8 +141,11 @@ curl で webhook に直接 POST）で `SLACK_WEBHOOK_URL_FACTORY`
 3. **ステージ変更**: 今週の昇格・降格と理由
 4. **収益と外挿**: 全アプリ収益合計（週次・月次換算）と、現在の通過率での1年後見込み。
    目標（月5〜10万円）に対するボトルネック（本数 / 通過率 / 単価）を1行で指摘
-5. **要アクション（人間向け）**: 下記の各項目を **1件ずつ明細で** 出す（「◯件あります」で終わらせない）。
-   毎日12時の factory-reminder と同じ粒度・同じ文面で、**どれを・どこで見て・何をするか**が単独で分かるように:
+5. **要アクション（人間向け）**: `$APP_FACTORY_HOME/data/pending.json` を読み、
+   下記の各項目を **1件ずつ明細で** 出す（「◯件あります」で終わらせない）。
+   pending.json は factory-reminder が生成する同じ構造なので、**そこから転記すればよい**
+   （自前で GitHub を数え直さない — 数字が食い違うと、どちらが本当か分からなくなる）。
+   **どれを・どこで見て・何をするか**が単独で分かるように:
    - 対象: 未マージの PRD PR / 未承認の feature-proposal / **提出承認待ちの release-train（`approved` 未付与）** /
      `factory-blocked` / `needs-clarification`（要件確認待ち）/ `app-review-rejected` /
      ASC・Xcode 未オンボーディング / スクリーンショット依頼 / 判定不能だった「要判断」項目

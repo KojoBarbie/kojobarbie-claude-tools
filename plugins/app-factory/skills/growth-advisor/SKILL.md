@@ -7,14 +7,14 @@ description: "growing ステージのアプリ1本に対し、コード探索＋
 
 growing ステージ（マイルストーン通過＝有望）と判定されたアプリに対し、「このアプリがもっと売れる/成長するには」を**主体的に**考えて提案するスキル。feature-hunt（週次の新機能提案）の姉妹スキルで、機能に限らず収益化・ASO・リテンション・PMF 仮説まで軸を広げるのが違い。
 
-**成果物は最大3件の提案 Issue（feature-hunt と完全に同形式）+ Slack 通知**。承認後の sub-issue 分割は feature-hunt の approve モードに委ねる。**このスキルの責務は提案まで**。
+**成果物は最大3件の提案 Issue（feature-hunt と完全に同形式）**（通知はしない）。承認後の sub-issue 分割は feature-hunt の approve モードに委ねる。**このスキルの責務は提案まで**。
 
 ## スコープ
 
 - **提案する**: 新機能 / 収益化・価格 / ASO・ストア導線 / リテンション施策 / PMF 仮説の5軸。コード変更にならない施策（ストア文言・価格変更など）も、Issue として作業手順が書けるなら提案してよい
 - **提案しない**: バグ修正・パフォーマンス・品質系（quality-release-cycle の領分）
 - **汎用SaaS機能の垂れ流しを禁止**: 通知センター・ダッシュボード・アクティビティフィード・オンボーディングウィザードのような「どのアプリにも付けられるが誰の課題も解いていない」提案は出さない。根拠が「一般論・ベストプラクティス」しかない案は捨てる
-- 基準を満たす案がなければ無理に3件出さず、その旨を Slack に報告する
+- 基準を満たす案がなければ無理に3件出さず、その旨を `kind=job_finished` のイベントに書く
 
 ## 前提リソース
 
@@ -27,13 +27,13 @@ growing ステージ（マイルストーン通過＝有望）と判定された
 | 製品コンテキスト | `<cwd>/.claude/product-context.md`（**毎回必読**） |
 | 提案・却下の履歴 | `<cwd>/.claude/feature-hunt-log.md`（却下理由＝好みの学習データ） |
 | 環境変数 | `$APP_FACTORY_HOME/.env`（`APP_FACTORY_HOME` のデフォルト: `~/dev/business/claude-cron`。`set -a && source && set +a` で読み込む） |
-| Slack投稿 | `python3 $APP_FACTORY_HOME/.claude/skills/slack-post/scripts/slack_post.py --file <md> --header <題> --webhook-url "$WEBHOOK"`。webhook は `SLACK_WEBHOOK_URL_FEATURE` があればそれ、なければ `SLACK_WEBHOOK_URL`（`slack-post` スキルは作者環境の前提。無い環境では curl で webhook に直接 POST する） |
+| イベント記録 | `. "$APP_FACTORY_HOME/scripts/lib/events.sh"` して `emit_event`（仕様は `docs/events.md`）。**通知はしない** |
 | Issue/ログ書式 | feature-hunt スキルの `references/proposal-format.md`（**この書式に完全に合わせる**） |
 | Analytics | `$APP_FACTORY_HOME` の `firebase-bigquery` スキル（portfolio.yml に `analytics_env_prefix` がある場合のみ。作者環境の前提 — 無い環境ではスキップ） |
 
 ## モード判定
 
-1. **無人実行** — factory-dispatch（launchd）経由の月次ローテ。ユーザーへの質問は一切せず、このスキルの基準で自分で判断する。判断に迷った点は Slack 報告に書き添える
+1. **無人実行** — factory-dispatch（launchd）経由の月次ローテ。ユーザーへの質問は一切せず、このスキルの基準で自分で判断する。判断に迷った点は完了イベントに書き添える
 2. **手動実行** — 「グロース施策を提案して」等。提案の方向性や絞り込みをユーザーと対話しながら調整してよい。Step 0 のステージガードも確認の上で緩められる
 
 どちらのモードでも、作業ディレクトリは対象アプリのリポジトリルート。最初に最新化する:
@@ -49,7 +49,7 @@ set -a && source "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}/.env" && s
 
 1. portfolio.yml から対象アプリのエントリ（stage / kpi / metrics / prd / analytics_env_prefix）を読む。対象アプリの特定は cwd のリポジトリ名（`gh repo view --json nameWithOwner` または `git remote`）と portfolio.yml の `repo` の突き合わせで行う
 2. **stage が `growing` でなければ**:
-   - 無人実行（factory-dispatch 経由）→ 「対象外（stage=xxx）」とログに出して**即終了**。Issue も Slack 通知も出さない
+   - 無人実行（factory-dispatch 経由）→ 「対象外（stage=xxx）」とログに出して**即終了**。Issue もイベントも出さない（ログだけ）
    - 手動実行 → ユーザーに「stage は xxx ですが続行しますか？」と確認し、了承があれば続行
 3. **未反応の提案が溜まっていないかチェック**（feature-hunt と同じルール）:
 
@@ -59,7 +59,7 @@ gh issue list --label feature-proposal --state open --limit 30 --json number,tit
 gh api repos/{owner}/{repo}/issues/N/reactions --jq '[.[] | select(.content == "+1")] | length'
 ```
 
-   `go` ラベルも 👍 リアクションも付いていない open の feature-proposal が**6件を超えていたら、新規提案はせず** Slack で「提案がたまっています（N件）。👍/go か close をお願いします」とだけ通知して終了する
+   `go` ラベルも 👍 リアクションも付いていない open の feature-proposal が**6件を超えていたら、新規提案はせず** `kind=job_skipped` / `severity=action` のイベントで「提案がたまっています（N件）。👍/go か close をお願いします」とだけ残して終了する
 
 ## Step 1: 2段階入力（コード探索 + 製品コンテキスト）
 
@@ -82,7 +82,7 @@ Explore サブエージェントに機能棚卸しをさせる。指示に含め
 2. `.claude/product-context.md` — コア体験と「やらないこと」
 3. **portfolio.yml の kpi / metrics** — M1〜M3 の達成状況、DL/DAU/D1/アクティベーション率/収益の実数と傾向。`unmeasured` の指標はどれかを控えておく
 4. `.claude/feature-hunt-log.md` — 過去の提案と**却下理由**。却下理由はユーザーの好みの最重要学習データ。同系統の再提案を避け、好みの方向に寄せる
-5. `analytics_env_prefix` があれば firebase-bigquery スキルでファネル・離脱箇所を取得（無ければスキップし、Slack 報告に「Analytics未接続」と一言添える）
+5. `analytics_env_prefix` があれば firebase-bigquery スキルでファネル・離脱箇所を取得（無ければスキップし、完了イベントに「Analytics未接続」と一言添える）
 
 ## Step 2: 多軸で候補を出す
 
@@ -121,18 +121,18 @@ gh issue create --title "[収益化/M] ..." --body-file /tmp/proposal.md --label
 2026-07-10 | #42 | トライアル開始前の価値提示画面 | growth-収益化 | 提案中 |
 ```
 
-## Step 5: Slack 通知
+## Step 5: イベント記録
 
-各提案のタイトル・カテゴリ・規模・根拠の要約・Issue URL と、「どの KPI ボトルネックを狙ったか」を1行で添えて投稿する。「👍 or `go` ラベルで承認 / close で見送り」の操作方法を毎回一行添える。
+**通知はしない。** 起票した提案を**1件1イベント**で残す。
+`title` に「どの KPI ボトルネックを狙ったか」を1行入れる。
 
 ```bash
-WEBHOOK="${SLACK_WEBHOOK_URL_FEATURE:-$SLACK_WEBHOOK_URL}"
-python3 "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}"/.claude/skills/slack-post/scripts/slack_post.py \
-  --file /tmp/growth_report.md --header "growth-advisor: <アプリ名> の施策提案" \
-  --webhook-url "$WEBHOOK"
+. "$APP_FACTORY_HOME/scripts/lib/events.sh"
+EVENT_JOB=growth-advisor
+emit_event kind=proposal_opened severity=action app="<アプリ名>" \
+  title="<提案タイトル>（<カテゴリ>/<規模>）— <根拠の要約>。👍 か go ラベルで承認 / close で見送り" \
+  url="<Issue URL>"
 ```
-
-（`slack_post.py` は作者環境の前提。無い環境では curl で `$WEBHOOK` に直接 POST する）
 
 ## 承認フロー（このスキルの外）
 
@@ -140,7 +140,7 @@ python3 "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}"/.claude/skills/sla
 
 ## 規律（必ず守る）
 
-- **無人実行時はユーザーに質問しない**。このスキルの基準で自分で判断し、判断に迷う点は Slack 報告に書く
+- **無人実行時はユーザーに質問しない**。このスキルの基準で自分で判断し、判断に迷う点は完了イベントに書く
 - 対象が growing 以外なら無人実行では即終了（Step 0）
 - 未反応 feature-proposal が6件超なら新規提案しない（Step 0）
 - 根拠・前提・検証方法の3点セットが揃わない提案は出さない（Step 3）

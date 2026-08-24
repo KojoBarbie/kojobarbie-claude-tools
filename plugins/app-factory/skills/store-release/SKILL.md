@@ -23,7 +23,7 @@ TestFlight 配信（Xcode Cloud）までは自動だが、その先の App Store
 3. **承認ゲート** — App Store への「提出」という外に出る操作は、**人間の明示承認（release-train issue の
    `approved` ラベル or 👍 リアクション）が無い限り実行しない**。默っていても提出されない（＝提出はオプトイン）。
    メタデータ生成・TestFlight 用ビルド確保など提出手前の準備は承認前でも自動で進める
-4. **無人時は質問しない** — 判断できないことは issue コメント + Slack に残して次回（または人間）に委ねる
+4. **無人時は質問しない** — 判断できないことは issue コメント + イベントに残して次回（または人間）に委ねる
 
 ## 前提と認証
 
@@ -45,7 +45,15 @@ JWT 生成（ES256・`aud: appstoreconnect-v1`・有効期限20分・ヘッダ `
 set -a && source "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}/.env" && set +a
 ```
 
-Slack 通知はすべて `$SLACK_WEBHOOK_URL_PRD` に送る。issue へのコメントは必ず `🤖` プレフィックスを付ける
+**通知はしない。** 起きたことは `$APP_FACTORY_HOME/data/events.jsonl` にイベントとして追記する
+（仕様は `docs/events.md`）。Slack にも他のどこにも投稿しない — 誰にどう知らせるかは利用者の受け手が決める。
+
+```bash
+. "${APP_FACTORY_HOME:-$HOME/dev/business/claude-cron}/scripts/lib/events.sh"
+EVENT_JOB=store-release
+```
+
+issue へのコメントは必ず `🤖` プレフィックスを付ける
 （自分の書き込みを次回実行で識別するためのマーカー）。
 
 ---
@@ -95,9 +103,14 @@ gh issue list --repo "$GITHUB_OWNER"/<repo> --label release-train --state open \
 - 止める/延期する場合は `hold` ラベル、やめる場合は close してください。
 ```
 
-起票したら Slack に、**issue URL・対象バージョンとその理由・「approved を付けると提出されます」**を含めて
-「🚂 <アプリ名> vX.Y.Z のリリース列車を用意しました。内容を確認して承認（approved）してください」と通知する
-（24時間で自動提出はしない）。
+起票したらイベントを1件出す（24時間で自動提出はしない）。
+**issue URL・対象バージョンとその理由・「approved を付けると提出されます」**を含める:
+
+```bash
+emit_event kind=release_prepared severity=action app="<アプリ名>" \
+  title="vX.Y.Z のリリース列車を用意しました（<マイナー↑/パッチ↑ の理由>）。内容を確認して approved ラベルか 👍 を付けると提出されます" \
+  url="<issue URL>" version=X.Y.Z
+```
 
 ### 3. メタデータ準備
 
@@ -128,7 +141,8 @@ gh issue list --repo "$GITHUB_OWNER"/<repo> --label release-train --state open \
 スクリーンショットは `docs/store-assets/` にあるものを使う。**無ければ**:
 
 - release-train issue に「- [ ] スクリーンショット（人間タスク）」を追記し、
-  Slack で **1回だけ** 人間に依頼する（issue に依頼済みマーカー `🤖 スクショ依頼済み` を残し、二重依頼しない）
+  `kind=human_task` / `severity=action` のイベントを **1回だけ** 出す
+  （issue に依頼済みマーカー `🤖 スクショ依頼済み` を残し、二重依頼しない）
 - スクショ待ちの間も列車は hold しない — ステップ 4 以降を先に進める。ただし提出（ステップ 5）の条件にスクショは必須
 
 ### 4. ビルド確保
@@ -199,7 +213,7 @@ git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
 5. ASC API でそのビルドの処理状態を確認する（`GET /v1/builds?filter[app]=<asc_app_id>` で
    最新ビルドの `processingState` が `VALID` になっているか）
 6. **処理中・ビルド未出現でも待ち続けない。** issue に `🤖 ビルド待ち（vX.Y.Z）` とコメントして今日は終了し、
-   次回実行で続きから再開する。3日以上ビルドが出現しない場合のみ Slack に異常として通知する
+   次回実行で続きから再開する。3日以上ビルドが出現しない場合のみ `kind=job_failed` / `severity=error` のイベントを出す
 
 ### 5. 承認チェックとメタデータ投入・提出
 
@@ -215,7 +229,7 @@ git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
 
 **承認がまだ無いときは提出しない。** メタデータ投入・ビルド紐付け（下記1〜4、外に出ない準備）は
 承認前でも進めてよいが、審査提出（5）だけは承認まで実行しない。承認待ちの列車は issue を open のまま残し、
-`🤖 提出承認待ち（vX.Y.Z）` コメントが無ければ1回だけ付けて次回に持ち越す（Slack への再依頼はしない
+`🤖 提出承認待ち（vX.Y.Z）` コメントが無ければ1回だけ付けて次回に持ち越す（イベントの再送はしない
 ＝日次リマインダー／週報の担当）。
 
 提出手順（ASC API。各操作の前に現状態を照会し、済んでいる工程はスキップする）:
@@ -235,7 +249,7 @@ git -C <repo> fetch --tags && git -C <repo> tag --points-at origin/main "v*"
 
 **初回はさらに慎重に**: そのアプリで ASC API による提出操作が初めての場合（過去の release-train issue に
 `🤖 提出しました` コメントが無い場合）、`approved` が付いていても手順 5 の直前でもう一度止め、
-App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で確認依頼する:
+App Privacy・輸出コンプラなど初回特有の落とし穴の確認を `kind=human_task` / `severity=action` のイベントで依頼する:
 
 > 🧑‍✈️ <アプリ名> は初回提出です。承認済みですが提出直前で一旦止めています。ASC で App Privacy 回答・
 > 輸出コンプラ・カテゴリ・著作権を確認し、問題なければ「store-release で提出して」と指示してください。
@@ -243,7 +257,8 @@ App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で�
 2回目以降のアプリは、承認（approved）さえ付いていれば全自動で提出してよい。
 
 提出したら issue に `🤖 提出しました（vX.Y.Z）` とコメントし、チェックリストを更新する。
-**issue は close せず「審査中」状態として open のまま残す**。Slack に「📮 <アプリ名> vX.Y.Z を審査提出しました」と通知する。
+**issue は close せず「審査中」状態として open のまま残す**。
+`emit_event kind=release_submitted severity=info app="<アプリ名>" title="vX.Y.Z を審査提出しました" url="<issue URL>" version=X.Y.Z`
 
 ### 6. 審査追跡
 
@@ -272,11 +287,12 @@ App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で�
        `gh pr list -R <owner/repo> --state open --json number --jq '.[].number' | xargs -n1 gh pr update-branch -R <owner/repo>`
        （コンフリクトで失敗した PR は issue にコメントで一覧を残し、無人時は手を出さない）
   3. prd-vault の portfolio.yml で該当アプリの stage を `validating` に更新してコミット・push
-  4. Slack に「🎉 <アプリ名> vX.Y.Z が App Store 審査を通過しました」
+  4. `emit_event kind=review_passed severity=info app="<アプリ名>" title="vX.Y.Z が App Store 審査を通過しました" url="<issue URL>" version=X.Y.Z`
 - **リジェクト**（`REJECTED` / `METADATA_REJECTED` / `DEVELOPER_REJECTED`）:
   1. Resolution Center の内容（取得できる範囲）を要約して issue に `🤖` コメント
   2. issue に `app-review-rejected` ラベルを付ける（列車は open のまま）
-  3. Slack に **即時** 通知する。対応は人間、または人間からの個別指示で行う（このジョブは自動で再提出しない）
+  3. `kind=review_rejected` / `severity=action` のイベントを出す（リジェクト理由の要約を `title` に入れる）。
+     対応は人間、または人間からの個別指示で行う（このジョブは自動で再提出しない）
 - **審査中のまま**（`WAITING_FOR_REVIEW` / `IN_REVIEW`）: 何もしない。次回に持ち越す
 
 ### 7. 版数の追い越しチェック（列車の有無に関わらず、毎回・全アプリ）
@@ -295,8 +311,8 @@ App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で�
    ${CLAUDE_PLUGIN_ROOT}/skills/store-release/scripts/bump_marketing_version.sh <repo> <配信済み版のパッチ+1>
    ```
 
-   併せて open PR に main を取り込ませ（`gh pr update-branch`）、Slack に
-   「🔢 <アプリ名> の開発版を vX.Y.Z に進めました（配信済み vA.B.C と衝突していたため）」と1行だけ通知する
+   併せて open PR に main を取り込ませ（`gh pr update-branch`）、
+   `emit_event kind=job_finished severity=info app="<アプリ名>" summary="開発版を vX.Y.Z に進めました（配信済み vA.B.C と衝突していたため）"`
 4. リポジトリの版数が配信済み版より大きければ何もしない（通常はこちら。無通知）
 
 審査提出中（`WAITING_FOR_REVIEW` / `IN_REVIEW`）の版はまだアップロードを塞がないので、この判定には含めない
@@ -315,7 +331,7 @@ App Privacy・輸出コンプラなど初回特有の落とし穴を Slack で�
 
 ## 禁止事項・スコープ外
 
-- 無人実行時にユーザーへ質問しない。判断保留は issue コメント + Slack に残す
+- 無人実行時にユーザーへ質問しない。判断保留は issue コメント + イベントに残す
 - アプリの実装内容（ダークモード禁止・課金は RevenueCat 等のプロジェクト規約）には触れない — それは実装側
   （factory-build / ship-issue）の領分。このスキルはストア提出のパイプラインだけを扱う
 - リジェクト後の自動再提出はしない（人間の判断を挟む）

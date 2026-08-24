@@ -1,6 +1,6 @@
 ---
 name: app-design-craft
-description: アプリの「美学・プロダクト設計レベル」のビジュアルデザイン設計＆UX設計＆デザインレビュー。引き算・余白・一貫性に加えて、動き/状態/第一印象と山場まで含む9レンズで、凡庸さを脱した完成度の高いUI/UXを作る/見極めるための原則とレビュー観点。iOS/SwiftUI を主対象に、画面・App Storeスクショ・ブランド全体を扱う。Use when：(1) アプリや画面の見た目・トンマナ・世界観を設計する時、(2) 既存UIやスクリーンショットを「デザインとして優れているか」レビューする時、(3) 配色/余白/タイポ/強調/コピーの方針を決める時、(4) 遷移・触覚・空状態・完了演出など体験の質を設計/点検する時、(5) 「もっと洗練させたい」「AIっぽい/凡庸な見た目を脱したい」「UXを良くしたい」「高級感・静けさを出したい」と言われた時。ボタン単体のロジックは ui-design-fundamentals、コード品質は swiftui-pro、離脱率ベースのオンボーディング設計は onboarding-advisor、モーションの仕様化と実装は ios-animation-design / ios-animation-implementation、出荷前の合否判定は adversarial-ios-design と役割分担。実例は design-vault から引く。
+description: アプリの「美学・プロダクト設計レベル」のビジュアルデザイン設計＆UX設計＆デザインレビュー。引き算・余白・一貫性に加えて、動き/状態/第一印象と山場まで含む9レンズで、凡庸さを脱した完成度の高いUI/UXを作る/見極めるための原則とレビュー観点。iOS/SwiftUI を主対象に、画面・App Storeスクショ・ブランド全体を扱う。Use when：(1) アプリや画面の見た目・トンマナ・世界観を設計する時、(2) 既存UIやスクリーンショットを「デザインとして優れているか」レビューする時、(3) 配色/余白/タイポ/強調/コピーの方針を決める時、(4) 遷移・触覚・空状態・完了演出など体験の質を設計/点検する時、(5) 「もっと洗練させたい」「AIっぽい/凡庸な見た目を脱したい」「UXを良くしたい」「高級感・静けさを出したい」と言われた時。ボタン単体のロジックは ui-design-fundamentals、コード品質は swiftui-pro、離脱率ベースのオンボーディング設計は onboarding-advisor、モーションの仕様化と実装は ios-animation-design / ios-animation-implementation、出荷前の合否判定は adversarial-ios-design と役割分担。
 ---
 
 # App Design Craft
@@ -19,14 +19,12 @@ description: アプリの「美学・プロダクト設計レベル」のビジ�
 
 ### 実例をどこから引くか
 
-1. **`$PRD_VAULT_DIR/design-vault/`（デフォルト `~/dev/business/prd-vault/design-vault/`）があれば最優先で使う。**
-   `patterns/*.md` は実際のアプリ N 例から帰納した型なので、単一スタジオの解より一般化されている。
-   引き方は `app-factory:design-vault` スキルの query モード（「〜なアプリのリファレンスを出して」）。
-   **方向性の異なる実例を複数見てから決めること** — 1つの参照だけで設計すると、どのアプリも同じ顔になる。
-2. `references/nemuiasa-case-study.md`（個人開発スタジオ nemuiasa の徹底分析）。
+1. `references/nemuiasa-case-study.md`（個人開発スタジオ nemuiasa の徹底分析）。
    「静かで柔らかい」という**ひとつの解**の完成形として参照する。**唯一解ではない**ので、
    これだけを見て全アプリをモノトーンに寄せない。
-3. design-vault が空で該当も無ければ、下記の原則だけで進める。それは劣化ではない。
+2. 対象アプリのジャンルで実際に使われているアプリを自分で見る。
+   **方向性の異なる実例を複数見てから決めること** — 1つの参照だけで設計すると、どのアプリも同じ顔になる。
+3. 該当する実例が無ければ、下記の原則だけで進める。それは劣化ではない。
 
 ## 前提の確認（作業に入る前に一度だけ）
 
@@ -54,7 +52,6 @@ description: アプリの「美学・プロダクト設計レベル」のビジ�
 
 | リソース | 無いときの挙動 |
 |---|---|
-| `$PRD_VAULT_DIR/design-vault/` | 実例を引けない。上の「実例をどこから引くか」の 2→3 にフォールバックする |
 | `$PRD_VAULT_DIR/portfolio.yml` | ⓪の「直近2本と方向がかぶっていないか」を機械的に確認できない。**手元のアプリのスクショを2〜3本並べて目視で代替する**（この確認自体は省略しない） |
 | Xcode / iOS シミュレータ | レンズ7〜9を実際に触って確認できず「未確認」止まりになる。`adversarial-ios-design` も動かない |
 
@@ -105,8 +102,8 @@ SwiftUI コードに落とす局面では `references/swiftui-recipes.md`（原�
 
 ### 設計モード
 
-1. **先に実例を見る。** design-vault があれば、これから作るジャンル・気分に近い実例を
-   **方向性の異なるものを含めて**引く（`app-factory:design-vault` の query モード）。
+1. **先に実例を見る。** これから作るジャンル・気分に近い実例を、
+   **方向性の異なるものを含めて**複数あたる（上記「実例をどこから引くか」）。
    参照ゼロで方針を決めると、既に知っている1つの様式に無自覚に寄る。
 2. **`references/design-decisions.md` の「⓪ 方向性のコミット」を先に決める。** 8方向から1つ選び、
    **`$PRD_VAULT_DIR/portfolio.yml` と既存アプリのスクショで、直近2本と方向がかぶっていないことを確認する**。
@@ -133,7 +130,6 @@ SwiftUI コードに落とす局面では `references/swiftui-recipes.md`（原�
 - `references/design-decisions.md` — 設計モードで「⓪ 方向性のコミット」＋「最初に決める6つ」のテンプレと埋め方
 - `references/swiftui-recipes.md` — 各原則を SwiftUI コードに落とす実装パターン
 - `references/nemuiasa-case-study.md` — 実例集（個人開発スタジオ nemuiasa の徹底分析。**ひとつの解**であり唯一解ではない）
-- `$PRD_VAULT_DIR/design-vault/patterns/` — 実アプリ N 例から帰納した型（あれば最優先。`app-factory:design-vault` が育てる）
 
 ## 関連スキルとの連携
 

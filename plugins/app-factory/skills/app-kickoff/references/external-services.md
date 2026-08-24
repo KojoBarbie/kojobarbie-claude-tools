@@ -1,7 +1,7 @@
 # 外部サービスの一気通貫セットアップ（Firebase / RevenueCat / AdMob / LP公開）
 
 方針: **API・CLI で自動化できるものは kickoff がその場でやり、できないものは「迷わず実行できる
-粒度のチェックリスト」として Slack に送る**。すべて冪等（既存があれば作らずスキップ）。
+粒度のチェックリスト」として `kind=human_task` のイベントに出す**。すべて冪等（既存があれば作らずスキップ）。
 シークレット実値はこのリポジトリに書かず、`$APP_FACTORY_HOME/.env`（デフォルト: `~/dev/business/claude-cron/.env`。`~/.config/app-factory/config.env` 参照）を参照する。
 
 ## 命名規約（先に決めておくと URL が予告できる）
