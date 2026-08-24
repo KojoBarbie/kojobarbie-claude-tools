@@ -13,7 +13,8 @@ prd-vault リポジトリの `showcase/` に置き、**Vercel** でデプロイ�
 > 一方 **LP は「製品やサービスの販売を宣伝」に当たるため Vercel を使わず Firebase Hosting のまま**（app-kickoff の external-services.md 参照）。この使い分けを崩さないこと。
 
 - Next.js App Router を **静的エクスポート**（`next.config.mjs` に `output: 'export'`）。データ取得はビルド時のみ（`apps.json` と `../prd/*.md` を fs で読む）。API 呼び出し・シークレットなし。`next build` で `out/` が生成される
-- **ダークモード禁止**（アプリ全体の規約）。全ページ明るい背景
+- **showcase のページ自体は全ページ明るい背景**（サイトの規約）。これは*ページの*話であり、
+  紹介対象アプリのトンマナ案を明るい配色に縛るものではない（アプリ側の規約は「単一外観にする」であって「明るくする」ではない）
 - **Deployment Protection**: Vercel Authentication + Standard Protection（Hobby でも利用可）。プレビュー URL とデプロイ URL は Vercel ログイン必須になる。ただし **Standard Protection では本番 URL は保護されない**（保護には Pro が必要）ため、prd-vault が private でも本番 URL は誰でも開ける前提で考える。だからプロジェクト名に推測されにくいランダムサフィックスを付けている（`pv-showcase-12ced869`）。プロジェクト名を変えると本番 URL も変わるので、むやみに変えない
 
 ## ディレクトリ構成
@@ -94,7 +95,8 @@ showcase/
   `next.config.mjs` の `images: { unoptimized: true }` の下で通常の `<img src>` を使う。
   `out/` に含めるため、**参照画像は `showcase/public/refs/` にコピーして参照する**
 
-配色は明るく（ダークモード禁止）。PRD の「デザイン方向性メモ」は**3案のうち推しの案**と一致させ、
+ページの地は明るく組む（サイトの規約）。ただし**紹介するトンマナ案が暗い外観でも構わない**
+（案のスウォッチ・モックはその案の配色で見せる）。PRD の「デザイン方向性メモ」は**3案のうち推しの案**と一致させ、
 どれを推すかをページ上で明示する（「PRD は A 案で書いています」）。
 
 ---

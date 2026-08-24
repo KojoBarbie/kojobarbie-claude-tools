@@ -169,6 +169,9 @@ gh issue list -R <owner/repo> --state open --limit 100 \
 
 **優先度（上から）**:
 
+0. **`design-refresh` ラベルの issue（全アプリ横断で最優先）**。ポートフォリオのトンマナ刷新は
+   期間を区切って一気に通さないと、アプリ間で新旧が混ざった状態が長く残る。
+   同一アプリ内では番号昇順。**このティアが空になったら通常の優先度に戻る**
 1. `building` アプリの MVP issue（app-kickoff が起票したもの）。`measurement` ラベル
    （計測実装）を最優先、残りは番号昇順
 2. `feature-approved` の親を持つ sub-issue（feature-hunt / growth-advisor 承認済み機能の子）
