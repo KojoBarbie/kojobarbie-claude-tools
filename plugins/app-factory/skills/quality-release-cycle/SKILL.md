@@ -87,6 +87,8 @@ UI/UX とストア観点はスタックによらず `references/audit-mobile-com
 - 事前に取得した既存 open Issue 一覧（`gh issue list --state open --limit 100 --json number,title`）と
   「重複する指摘は Issue 番号を添えて重複と明記」する指示
 - 「一般論ではなくこのコードベースに根拠のある指摘だけを返す」という縛り
+- 「アクセシビリティ観点（Dynamic Type / VoiceOver / WCAG コントラスト比 / Reduce Motion / 44pt 基準）は
+  対象外なので調べも報告もしない」という除外（後述の「アクセシビリティは Issue 化しない」）
 
 ### 3. 「高」判定の発見はコードで裏取りする
 
@@ -108,6 +110,23 @@ gh issue list --state all --limit 200 --json number,title,state
 - リポジトリに仕様ディレクトリ（`.kiro/specs/` 等）があれば、既に計画済みの機能は Issue 本文でそこを参照する
 
 ### 5. Issue を作成する
+
+**アクセシビリティは Issue 化しない（恒久ルール）**
+
+支援技術・アクセシビリティ設定に固有の指摘は、severity が何であっても Issue にしない。具体的には
+Dynamic Type / テキストスケーリング追従、VoiceOver・semantic ラベル、WCAG のコントラスト比、
+Reduce Motion、タップ領域の 44/48pt 基準。
+
+理由: この観点はどのアプリでも機械的に大量の指摘を生むが、対象ユーザーの規模に対して工数が見合わない。
+立ち上げ期のアプリでは、コア体験の完成・計測・リリースの前に置く価値がない。
+発見の握りつぶしではなく**優先順位の宣言**なので、最終レポートには「アクセシビリティ（対象外）」として
+1行で残してよい（Issue にはしない）。
+
+例外は2つだけ:
+
+1. **既定設定のまま壊れているもの**は、アクセシビリティではなく通常の UI バグとして Issue 化する。
+   線引きは `references/audit-mobile-common.md` の「アクセシビリティ」節にある
+2. ユーザーが「アクセシビリティを見て」と**明示的にスコープ指定した**とき
 
 `references/issue-format.md` のテンプレートに従う。要点:
 
